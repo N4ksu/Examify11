@@ -1,0 +1,65 @@
+openapi: 3.0.0
+info:
+  title: Examify Teacher Essentials API
+  version: 1.0.0
+paths:
+  /api/students/bulk-upload:
+    post:
+      summary: Bulk upload students via CSV/Excel
+      security:
+        - sanctum: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Success
+        '422':
+          description: Validation Error
+
+  /api/analytics/exam/{id}:
+    get:
+      summary: Get detailed exam analytics
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  average_score:
+                    type: number
+                  highest_score:
+                    type: number
+                  lowest_score:
+                    type: number
+                  score_distribution:
+                    type: object
+                  question_performance:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        text:
+                          type: string
+                        correct_count:
+                          type: integer
+                        incorrect_count:
+                          type: integer
