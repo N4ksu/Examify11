@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/providers/assessment_provider.dart';
+import '../../../shared/providers/auth_provider.dart';
+import '../../../shared/models/user.dart';
+import '../../../core/api/api_client.dart';
 
 class StudentResultScreen extends ConsumerWidget {
   final String assessmentId;
@@ -18,7 +21,7 @@ class StudentResultScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (result != null) {
-      return _buildContent(context, result!);
+      return _buildContent(context, ref, result!);
     }
 
     if (attemptId == null) {
@@ -28,18 +31,20 @@ class StudentResultScreen extends ConsumerWidget {
     final resultAsync = ref.watch(studentResultProvider(attemptId!));
 
     return resultAsync.when(
-      data: (data) => _buildContent(context, data),
+      data: (data) => _buildContent(context, ref, data),
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 
-  Widget _buildContent(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, Map<String, dynamic> data) {
     final bool showScore = data['show_score'] ?? true;
     final score = data['score']?.toString();
     final total = data['total']?.toString() ?? '0';
     final percentage = data['percentage']?.toString();
     final List<dynamic>? questionsResults = data['questions_results'];
+    final user = ref.watch(authProvider).user;
+    final bool isTeacher = user?.role == UserRole.teacher;
 
     const Color primaryViolet = Color(0xFF6200EE);
     const Color scoreCardBg = Color(0xFFF5F3FF);
@@ -119,8 +124,10 @@ class StudentResultScreen extends ConsumerWidget {
                   ),
 
                 // Detailed Results
-                if (showScore && questionsResults != null)
-                  ...questionsResults.map((q) => _buildQuestionCard(context, q)),
+                if (questionsResults != null)
+                  ...questionsResults.map(
+                    (q) => _buildQuestionCard(context, ref, q, isTeacher),
+                  ),
 
                 const SizedBox(height: 32),
 
@@ -152,7 +159,12 @@ class StudentResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuestionCard(BuildContext context, Map<String, dynamic> q) {
+  Widget _buildQuestionCard(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> q,
+    bool isTeacher,
+  ) {
     final bool isEssay = q['type'] == 'essay';
     final bool isCorrect = q['is_correct'] ?? false;
     final String studentAnswer = q['student_response'] ?? 'No answer';
@@ -198,7 +210,30 @@ class StudentResultScreen extends ConsumerWidget {
               color: Color(0xFF666666),
             ),
           ),
-          if (isEssay) ...[
+          if (isTeacher) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            Row(
+              children: [
+                const Text(
+                  'Teacher Override:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () => _setOverride(context, ref, q['id'], true),
+                  icon: const Icon(Icons.check, size: 16, color: Colors.green),
+                  label: const Text('Correct', style: TextStyle(color: Colors.green)),
+                ),
+                TextButton.icon(
+                  onPressed: () => _setOverride(context, ref, q['id'], false),
+                  icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                  label: const Text('Incorrect', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          ],
+          if (isEssay && !isTeacher) ...[
             const SizedBox(height: 8),
             const Text(
               'Awaiting Grading',
@@ -212,5 +247,42 @@ class StudentResultScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _setOverride(
+    BuildContext context,
+    WidgetRef ref,
+    int questionId,
+    bool isCorrect,
+  ) async {
+    if (attemptId == null) return;
+
+    try {
+      final api = ref.read(apiClientProvider);
+      await api.post('/attempts/$attemptId/override-answer', data: {
+        'question_id': questionId,
+        'teacher_override': isCorrect,
+      });
+
+      // Invalidate both the provider and potentially any related analytics
+      ref.invalidate(studentResultProvider(attemptId!));
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Question marked as ${isCorrect ? 'Correct' : 'Incorrect'}',
+            ),
+            backgroundColor: isCorrect ? Colors.green : Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update grade: $e')),
+        );
+      }
+    }
   }
 }

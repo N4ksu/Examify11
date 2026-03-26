@@ -59,6 +59,11 @@ class TeacherEssentialsService {
         .toList();
   }
 
+  Future<List<dynamic>> getTeacherResults(int assessmentId) async {
+    final response = await _dio.get('/assessments/$assessmentId/results');
+    return response.data as List<dynamic>;
+  }
+
   Future<Map<String, dynamic>> submitAssessment(
     int attemptId,
     List<Map<String, dynamic>> answers,
@@ -122,4 +127,8 @@ final assessmentDetailProvider = FutureProvider.family<Assessment, int>((
   id,
 ) {
   return ref.watch(teacherEssentialsServiceProvider).getAssessmentDetail(id);
+});
+
+final teacherResultsProvider = FutureProvider.family<List<dynamic>, int>((ref, assessmentId) {
+  return ref.watch(teacherEssentialsServiceProvider).getTeacherResults(assessmentId);
 });

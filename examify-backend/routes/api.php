@@ -75,10 +75,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Attempts & Proctoring API
     Route::post('/attempts/{id}/submit', [StudentAttemptController::class, 'submit'])->middleware('student');
     Route::post('/attempts/{id}/proctor-event', [StudentAttemptController::class, 'proctorEvent'])->middleware('student');
+    Route::post('/attempts/{id}/override-answer', [StudentAttemptController::class, 'overrideAnswer'])->middleware('teacher');
     Route::post('/start-exam/{id}', [AssessmentController::class, 'startExam'])->middleware('student');
 
     // Results API
-    Route::get('/attempts/{id}/result', [\App\Http\Controllers\Api\ResultController::class, 'studentResult'])->middleware('student');
+    Route::get('/attempts/{id}/result', [\App\Http\Controllers\Api\ResultController::class, 'studentResult']);
     Route::get('/assessments/{id}/results', [\App\Http\Controllers\Api\ResultController::class, 'teacherResults'])->middleware('teacher');
     Route::get('/assessments/{id}/proctoring-report', [\App\Http\Controllers\Api\ResultController::class, 'proctoringReport'])->middleware('teacher');
 

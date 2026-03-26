@@ -64,11 +64,13 @@ class StudentAttemptController extends Controller
                 // Delete old answers for this question
                 $attempt->answers()->where('question_id', $questionId)->delete();
 
-                // Insert new answers
+                // Insert new answers with is_correct calculation
                 foreach ($selectedOptionIds as $optionId) {
+                    $selectedOption = $question->options->find($optionId);
                     $attempt->answers()->create([
                         'question_id' => $questionId,
                         'option_id' => $optionId,
+                        'is_correct' => $selectedOption ? $selectedOption->is_correct : false,
                     ]);
                 }
             }
@@ -110,6 +112,7 @@ class StudentAttemptController extends Controller
             'platform' => 'required|string',
             'device_info' => 'required|string',
             'timestamp' => 'required|date',
+            'remark' => 'nullable|string',
         ]);
 
         $attempt->increment('violation_count');
@@ -122,6 +125,7 @@ class StudentAttemptController extends Controller
             'device_info' => $validated['device_info'],
             'ip_address' => $request->ip(),
             'violation_number' => $count,
+            'remark' => $validated['remark'] ?? null,
             'timestamp' => \Carbon\Carbon::parse($validated['timestamp']),
         ]);
 
@@ -136,6 +140,43 @@ class StudentAttemptController extends Controller
             return response()->json(['action' => 'warn', 'violation_count' => $count]);
         }
 
-        return response()->json(['action' => 'log', 'violation_count' => $count]);
+    }
+
+    public function overrideAnswer(Request $request, $id)
+    {
+        $attempt = StudentAttempt::findOrFail($id);
+        $user = $request->user();
+
+        // Check if user is the teacher of this assessment
+        if ($attempt->assessment->classroom->teacher_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'question_id' => 'required|exists:questions,id',
+            'teacher_override' => 'required|boolean', // true for correct, false for incorrect
+        ]);
+
+        // Update all answer rows for this question in this attempt
+        $affected = $attempt->answers()
+            ->where('question_id', $validated['question_id'])
+            ->update(['teacher_override' => $validated['teacher_override']]);
+
+        // If no answers exist (e.g. skipped question), create a dummy one to store the override
+        if ($affected === 0) {
+            $attempt->answers()->create([
+                'question_id' => $validated['question_id'],
+                'teacher_override' => $validated['teacher_override'],
+            ]);
+        }
+
+        // Recalculate and update the attempt score
+        $newScore = $this->gradeService->calculateScore($attempt);
+        $attempt->update(['score' => $newScore]);
+
+        return response()->json([
+            'message' => 'Override applied successfully',
+            'new_score' => $newScore
+        ]);
     }
 }

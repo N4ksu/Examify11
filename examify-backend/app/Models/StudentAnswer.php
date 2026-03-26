@@ -11,6 +11,8 @@ class StudentAnswer extends Model
         'question_id',
         'option_id',
         'text_response',
+        'is_correct',
+        'teacher_override',
     ];
 
     public function attempt()

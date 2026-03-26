@@ -1,11 +1,13 @@
 // lib/features/analytics/exam_analytics_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'models/exam_analytics.dart';
 import 'providers/exam_analytics_provider.dart';
 import 'widgets/violation_type_tile.dart';
 import 'widgets/student_violation_bottom_sheet.dart';
 import 'widgets/outcome_mastery_tab.dart';
+import 'widgets/submissions_tab.dart';
 
 class ExamAnalyticsScreen extends ConsumerStatefulWidget {
   final String examId;
@@ -47,10 +49,10 @@ class _ExamAnalyticsScreenState extends ConsumerState<ExamAnalyticsScreen> {
     final analytics = ref.watch(examAnalyticsProvider(_examId));
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics'),
+        title: const Text('Exam Report'),
         centerTitle: false,
         actions: [
           IconButton(
@@ -60,14 +62,18 @@ class _ExamAnalyticsScreenState extends ConsumerState<ExamAnalyticsScreen> {
         ],
         bottom: const TabBar(
           tabs: [
-            Tab(text: 'Proctoring'),
+            Tab(text: 'Submissions'),
+            Tab(text: 'Violations'),
             Tab(text: 'Mastery'),
           ],
         ),
       ),
       body: TabBarView(
         children: [
-          // Tab 1: Proctoring Dashboard
+          // Tab 1: Submissions
+          SubmissionsTab(examId: _examId),
+
+          // Tab 2: Violations Summary
           RefreshIndicator(
             onRefresh: () async => ref.invalidate(examAnalyticsProvider(_examId)),
             child: analytics.when(
@@ -76,15 +82,38 @@ class _ExamAnalyticsScreenState extends ConsumerState<ExamAnalyticsScreen> {
                 message: err.toString(),
                 onRetry: () => ref.invalidate(examAnalyticsProvider(_examId)),
               ),
-              data: (summary) => _Dashboard(
-                summary: summary,
-                examId: _examId,
-                onViewStudent: _openStudentSheet,
+              data: (summary) => Column(
+                children: [
+                  Expanded(
+                    child: _Dashboard(
+                      summary: summary,
+                      examId: _examId,
+                      onViewStudent: _openStudentSheet,
+                    ),
+                  ),
+                  // Navigation link to full proctoring logs
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/assessment/$_examId/reports'),
+                      icon: const Icon(Icons.list_alt_rounded, size: 18),
+                      label: const Text('View Full Proctoring Logs →'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF6E4CF5),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           
-          // Tab 2: Mastery Analytics
+          // Tab 3: Mastery Analytics
           analytics.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, _) => Center(child: Text('Error loading mastery data: $err')),

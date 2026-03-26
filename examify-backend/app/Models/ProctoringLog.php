@@ -13,6 +13,7 @@ class ProctoringLog extends Model
         'device_info',
         'ip_address',
         'violation_number',
+        'remark',
     ];
 
     public function attempt()

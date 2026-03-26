@@ -4,11 +4,13 @@ import '../../core/api/api_client.dart';
 class ProctoringLogEntry {
   final String eventType;
   final String platform;
+  final String? remark;
   final DateTime timestamp;
 
   ProctoringLogEntry({
     required this.eventType,
     required this.platform,
+    this.remark,
     required this.timestamp,
   });
 
@@ -16,7 +18,10 @@ class ProctoringLogEntry {
     return ProctoringLogEntry(
       eventType: json['event_type'] ?? 'Unknown',
       platform: json['platform'] ?? 'Unknown',
-      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
+      remark: json['remark'],
+      timestamp: DateTime.parse(
+        json['timestamp'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 }

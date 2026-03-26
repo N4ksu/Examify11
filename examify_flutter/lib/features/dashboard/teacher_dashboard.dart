@@ -17,8 +17,7 @@ class TeacherDashboard extends ConsumerStatefulWidget {
 
 class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   bool _sidebarOpen = false;
-  String _selectedPage = 'classes'; // 'classes' | 'proctoring' | 'outcomes'
-  bool _analyticsExpanded = false;
+  String _selectedPage = 'classes'; // 'classes' | 'analytics' | 'retake_requests'
 
   @override
   Widget build(BuildContext context) {
@@ -53,15 +52,11 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                       child: Container(
                         color: Colors.transparent,
                         padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
-                        child: _selectedPage == 'proctoring'
+                        child: _selectedPage == 'analytics'
                             ? const SingleChildScrollView(
                                 child: GlobalAnalyticsSection(),
                               )
-                            : _selectedPage == 'outcomes'
-                                ? const SingleChildScrollView(
-                                    child: _CourseOutcomesOverview(),
-                                  )
-                                : _selectedPage == 'retake_requests'
+                            : _selectedPage == 'retake_requests'
                                     ? const RetakeRequestsScreen()
                                     : classroomsAsync.when(
                                 data: (classrooms) =>
@@ -297,9 +292,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   }
 
   Widget _buildSidebar(User? user) {
-    final isAnalyticsPage =
-        _selectedPage == 'proctoring' || _selectedPage == 'outcomes';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -310,47 +302,17 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           selected: _selectedPage == 'classes',
           onTap: () => setState(() => _selectedPage = 'classes'),
         ),
-        // ── Expandable Analytics Section ──
         _buildSidebarItem(
           icon: Icons.analytics_rounded,
           label: 'Analytics',
-          selected: isAnalyticsPage,
-          trailing: Icon(
-            _analyticsExpanded
-                ? Icons.expand_less
-                : Icons.expand_more,
-            color: const Color(0xFF8B98AE),
-            size: 20,
-          ),
-          onTap: () => setState(() {
-            _analyticsExpanded = !_analyticsExpanded;
-            if (_analyticsExpanded && !isAnalyticsPage) {
-              _selectedPage = 'proctoring';
-            }
-          }),
+          selected: _selectedPage == 'analytics',
+          onTap: () => setState(() => _selectedPage = 'analytics'),
         ),
-        if (_analyticsExpanded) ...[
-          _buildSubItem(
-            icon: Icons.shield_outlined,
-            label: 'Proctoring',
-            selected: _selectedPage == 'proctoring',
-            onTap: () => setState(() => _selectedPage = 'proctoring'),
-          ),
-          _buildSubItem(
-            icon: Icons.diamond_outlined,
-            label: 'Course Outcomes',
-            selected: _selectedPage == 'outcomes',
-            onTap: () => setState(() => _selectedPage = 'outcomes'),
-          ),
-        ],
         _buildSidebarItem(
           icon: Icons.refresh,
           label: 'Retake Requests',
           selected: _selectedPage == 'retake_requests',
-          onTap: () => setState(() {
-            _selectedPage = 'retake_requests';
-            _analyticsExpanded = false;
-          }),
+          onTap: () => setState(() => _selectedPage = 'retake_requests'),
         ),
         const Spacer(),
         Container(
@@ -384,55 +346,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     );
   }
 
-  Widget _buildSubItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool selected = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE7F6FF) : Colors.white,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 72,
-              child: Center(
-                child: Icon(
-                  icon,
-                  color: selected
-                      ? const Color(0xFF2EA4EA)
-                      : const Color(0xFF8B98AE),
-                  size: 20,
-                ),
-              ),
-            ),
-            if (_sidebarOpen)
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected
-                        ? const Color(0xFF2EA4EA)
-                        : const Color(0xFF71819C),
-                    fontSize: 14,
-                    fontWeight:
-                        selected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildSidebarItem({
     required IconData icon,
@@ -805,103 +718,3 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Course Outcomes Overview (placeholder for dashboard-level view)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _CourseOutcomesOverview extends StatelessWidget {
-  const _CourseOutcomesOverview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF8E44AD), Color(0xFFAB47BC)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.diamond_outlined,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Course Outcomes',
-                    style: TextStyle(
-                      color: Color(0xFF24364E),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    'Manage outcomes across all classrooms',
-                    style: TextStyle(
-                      color: Color(0xFF8B98AE),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E5F5),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.diamond_outlined,
-                    size: 32,
-                    color: Color(0xFF8E44AD),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Course Outcomes Overview',
-                  style: TextStyle(
-                    color: Color(0xFF3C4A60),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Open a classroom to manage its course outcomes.\nOutcomes are configured per classroom.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF8B9AB1),
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

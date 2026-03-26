@@ -13,14 +13,18 @@ class ResultController extends Controller
 {
     public function studentResult(Request $request, $id)
     {
-        $attempt = StudentAttempt::with(['assessment.questions.options', 'answers'])
+        $attempt = StudentAttempt::with(['assessment.classroom', 'assessment.questions.options', 'answers'])
             ->findOrFail($id);
 
-        if ($attempt->student_id !== $request->user()->id) {
+        $user = $request->user();
+        $isStudent = $attempt->student_id === $user->id;
+        $isTeacher = $attempt->assessment->classroom->teacher_id === $user->id;
+
+        if (!$isStudent && !$isTeacher) {
             abort(403);
         }
 
-        $showScore = $attempt->assessment->show_score;
+        $showScore = $attempt->assessment->show_score || $isTeacher;
         $totalPossible = 0;
 
         $questionsResults = $attempt->assessment->questions->map(function ($question) use ($attempt, &$totalPossible) {
@@ -30,12 +34,20 @@ class ResultController extends Controller
             
             $pointsEarned = 0;
             $isCorrect = false;
+            
+            // Check for teacher override
+            $overrideRow = $studentAnswers->whereNotNull('teacher_override')->first();
+            if ($overrideRow !== null) {
+                $isCorrect = (bool) $overrideRow->teacher_override;
+                $pointsEarned = $isCorrect ? $question->points : 0;
+            }
+            
             $responseBody = "";
 
             if ($question->type === 'essay') {
-                $responseBody = $studentAnswers->first()->text_response ?? "No answer";
+                $responseBody = optional($studentAnswers->first())->text_response ?? "No answer";
                 // Essay is awaiting grading, don't show correct/incorrect
-            } else {
+            } else if ($overrideRow === null) { // Only auto-grade if no override
                 // Determine response text
                 $selectedOptions = $question->options->whereIn('id', $selectedOptionIds);
                 $responseBody = $selectedOptions->pluck('body')->join(', ') ?: "No answer";
@@ -68,6 +80,10 @@ class ResultController extends Controller
                         }
                     }
                 }
+            } else {
+                // Determine response text even if overridden
+                $selectedOptions = $question->options->whereIn('id', $selectedOptionIds);
+                $responseBody = $selectedOptions->pluck('body')->join(', ') ?: "No answer";
             }
 
             return [
@@ -82,9 +98,9 @@ class ResultController extends Controller
         });
 
         return response()->json([
-            'score' => $showScore ? $attempt->score : null,
+            'score' => $showScore ? ($attempt->score ?? 0) : null,
             'total' => $totalPossible,
-            'percentage' => $showScore ? round(($attempt->score / ($totalPossible ?: 1)) * 100, 2) : null,
+            'percentage' => $showScore ? round((($attempt->score ?? 0) / ($totalPossible ?: 1)) * 100, 2) : null,
             'show_score' => $showScore,
             'status' => $attempt->status,
             'questions_results' => $showScore ? $questionsResults : [],
@@ -106,6 +122,7 @@ class ResultController extends Controller
             ->get()
             ->map(function ($attempt) use ($totalQuestions) {
                 return [
+                    'id' => $attempt->id,
                     'student' => $attempt->student,
                     'score' => $attempt->score,
                     'total' => $totalQuestions,
@@ -145,7 +162,8 @@ class ResultController extends Controller
                             'device_info' => $log->device_info,
                             'ip_address' => $log->ip_address,
                             'violation_number' => $log->violation_number,
-                            'timestamp' => $log->timestamp->toIso8601String(),
+                            'remark' => $log->remark,
+                            'timestamp' => $log->timestamp ? $log->timestamp->toIso8601String() : null,
                         ];
                     }),
                 ];

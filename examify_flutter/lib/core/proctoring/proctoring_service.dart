@@ -100,7 +100,7 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
         return;
       }
 
-      _reportViolation(eventType);
+      _reportViolation(eventType, remark: _getDefaultRemark(eventType));
     });
   }
 
@@ -196,7 +196,7 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
     return 'Unknown';
   }
 
-  Future<void> _reportViolation(String eventType) async {
+  Future<void> _reportViolation(String eventType, {String? remark}) async {
     violationCount++;
     final info = await _getDeviceInfo();
 
@@ -208,6 +208,7 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
           'platform': _getPlatformName(),
           'device_info': info,
           'timestamp': DateTime.now().toUtc().toIso8601String(),
+          'remark': remark ?? _getDefaultRemark(eventType),
         },
       );
 
@@ -219,6 +220,27 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint('Failed to report violation: $e');
+    }
+  }
+
+  String _getDefaultRemark(String eventType) {
+    switch (eventType) {
+      case 'alt_tab':
+        return 'User switched to another application or tab';
+      case 'app_background':
+        return 'Application was moved to background';
+      case 'window_blur':
+        return 'Screen lost focus (Alt-Tab or window switch)';
+      case 'fullscreen_exit':
+        return 'Left full-screen mode';
+      case 'window_resize':
+        return 'Exam window was resized';
+      case 'window_unmaximize':
+        return 'Exam window was unmaximized';
+      case 'window_close_attempt':
+        return 'Attempted to close the exam window';
+      default:
+        return 'Proctoring violation detected: $eventType';
     }
   }
 }

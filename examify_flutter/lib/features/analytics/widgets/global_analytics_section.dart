@@ -10,6 +10,7 @@
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/exam_analytics.dart';
@@ -29,8 +30,8 @@ class _GlobalAnalyticsSectionState extends ConsumerState<GlobalAnalyticsSection>
   @override
   bool get wantKeepAlive => true;
 
-  // Currently selected exam from dropdown (null = global view)
   AssessmentOption? _selectedExam;
+  DateTime? _lastUpdated;
 
   void _openStudentSheet(TopStudentStat student, String endpoint) {
     showModalBottomSheet(
@@ -50,8 +51,17 @@ class _GlobalAnalyticsSectionState extends ConsumerState<GlobalAnalyticsSection>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // required by KeepAlive mixin
+    super.build(context);
     final analytics = ref.watch(globalAnalyticsProvider);
+
+    // Track last updated time whenever data loads
+    analytics.whenData((_) {
+      if (_lastUpdated == null) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _lastUpdated = DateTime.now());
+        });
+      }
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,6 +85,11 @@ class _GlobalAnalyticsSectionState extends ConsumerState<GlobalAnalyticsSection>
     BuildContext context,
     AsyncValue<GlobalAnalytics> analytics,
   ) {
+    final now = _lastUpdated;
+    final updatedText = now != null
+        ? 'Updated ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}'
+        : 'Loading…';
+
     return Row(
       children: [
         Container(
@@ -96,18 +111,42 @@ class _GlobalAnalyticsSectionState extends ConsumerState<GlobalAnalyticsSection>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Analytics Overview',
-                style: TextStyle(
-                  color: Color(0xFF24364E),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
+              Row(
+                children: [
+                  const Text(
+                    'Analytics Overview',
+                    style: TextStyle(
+                      color: Color(0xFF24364E),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Live indicator dot
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'LIVE',
+                    style: TextStyle(
+                      color: Color(0xFF10B981),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
               Text(
                 _selectedExam == null
-                    ? 'Across all classrooms'
-                    : '${_selectedExam!.title}  ·  ${_selectedExam!.classroomName}',
+                    ? 'Overview Across All Classrooms  ·  $updatedText'
+                    : '${_selectedExam!.title}  ·  ${_selectedExam!.classroomName}  ·  $updatedText',
                 style: const TextStyle(
                   color: Color(0xFF8B98AE),
                   fontSize: 12,
@@ -125,7 +164,10 @@ class _GlobalAnalyticsSectionState extends ConsumerState<GlobalAnalyticsSection>
         const SizedBox(width: 8),
         // Refresh
         InkWell(
-          onTap: () => ref.invalidate(globalAnalyticsProvider),
+          onTap: () {
+            setState(() => _lastUpdated = DateTime.now());
+            ref.invalidate(globalAnalyticsProvider);
+          },
           borderRadius: BorderRadius.circular(8),
           child: const Padding(
             padding: EdgeInsets.all(6),

@@ -16,10 +16,19 @@ class GradeCalculationService
 
         foreach ($questions as $question) {
             $points = $question->points;
-            $selectedOptionIds = $attempt->answers()
-                ->where('question_id', $question->id)
-                ->pluck('option_id')
-                ->toArray();
+            
+            // Check for teacher override first
+            $answerRows = $attempt->answers()->where('question_id', $question->id)->get();
+            $overrideRow = $answerRows->whereNotNull('teacher_override')->first();
+            
+            if ($overrideRow !== null) {
+                if ($overrideRow->teacher_override) {
+                    $total += $points;
+                }
+                continue;
+            }
+
+            $selectedOptionIds = $answerRows->pluck('option_id')->toArray();
 
             if ($question->type == 'multiple_select') {
                 $correctOptionIds = $question->options
@@ -43,7 +52,7 @@ class GradeCalculationService
                         $total += $points;
                     }
                 }
-            } else {
+            } else if ($question->type !== 'essay') {
                 // Single-select (multiple_choice, true_false)
                 if (count($selectedOptionIds) == 1) {
                     $selectedOption = $question->options->find($selectedOptionIds[0]);
