@@ -21,6 +21,8 @@ class ExamAnalyticsScreen extends ConsumerStatefulWidget {
 
 class _ExamAnalyticsScreenState extends ConsumerState<ExamAnalyticsScreen> {
   late int _examId;
+  final Color primaryViolet = const Color(0xFF673AB7);
+  final Color accentViolet = const Color(0xFFEDE7F6);
 
   @override
   void initState() {
@@ -32,7 +34,7 @@ class _ExamAnalyticsScreenState extends ConsumerState<ExamAnalyticsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -51,79 +53,103 @@ class _ExamAnalyticsScreenState extends ConsumerState<ExamAnalyticsScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Exam Report'),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(examAnalyticsProvider(_examId)),
+        backgroundColor: const Color(0xFFF8F9FE),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: primaryViolet,
+          title: const Text(
+            'Exam Report',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-        bottom: const TabBar(
-          tabs: [
-            Tab(text: 'Submissions'),
-            Tab(text: 'Violations'),
-            Tab(text: 'Mastery'),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => ref.invalidate(examAnalyticsProvider(_examId)),
+            ),
+          ],
+          bottom: TabBar(
+            labelColor: primaryViolet,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: primaryViolet,
+            indicatorWeight: 3,
+            tabs: const [
+              Tab(text: 'Submissions'),
+              Tab(text: 'Violations'),
+              Tab(text: 'Mastery'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            SubmissionsTab(examId: _examId),
+            _buildViolationsTab(analytics),
+            analytics.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
+              data: (_) => OutcomeMasteryTab(examId: _examId),
+            ),
           ],
         ),
       ),
-      body: TabBarView(
-        children: [
-          // Tab 1: Submissions
-          SubmissionsTab(examId: _examId),
+    );
+  }
 
-          // Tab 2: Violations Summary
-          RefreshIndicator(
-            onRefresh: () async => ref.invalidate(examAnalyticsProvider(_examId)),
-            child: analytics.when(
-              loading: () => _LoadingSkeleton(),
-              error: (err, _) => _ErrorState(
-                message: err.toString(),
-                onRetry: () => ref.invalidate(examAnalyticsProvider(_examId)),
+  Widget _buildViolationsTab(AsyncValue<ExamSummary> analytics) {
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(examAnalyticsProvider(_examId)),
+      child: analytics.when(
+        loading: () => _LoadingSkeleton(),
+        error: (err, _) => _ErrorState(
+          message: err.toString(),
+          onRetry: () => ref.invalidate(examAnalyticsProvider(_examId)),
+        ),
+        data: (summary) => Column(
+          children: [
+            Expanded(
+              child: _Dashboard(
+                summary: summary,
+                examId: _examId,
+                onViewStudent: _openStudentSheet,
               ),
-              data: (summary) => Column(
-                children: [
-                  Expanded(
-                    child: _Dashboard(
-                      summary: summary,
-                      examId: _examId,
-                      onViewStudent: _openStudentSheet,
-                    ),
-                  ),
-                  // Navigation link to full proctoring logs
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(top: BorderSide(color: Colors.grey.shade200)),
-                    ),
-                    child: TextButton.icon(
-                      onPressed: () => context.push('/assessment/$_examId/reports'),
-                      icon: const Icon(Icons.list_alt_rounded, size: 18),
-                      label: const Text('View Full Proctoring Logs →'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF6E4CF5),
-                      ),
-                    ),
+            ),
+            // Footer Button
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
                   ),
                 ],
               ),
+              child: Center(
+                child: SizedBox(
+                  width: 250, // Keep button from being too wide
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        context.push('/assessment/$_examId/reports'),
+                    icon: const Icon(Icons.list_alt_rounded, size: 18),
+                    label: const Text('Full Proctoring Logs'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryViolet,
+                      side: BorderSide(color: primaryViolet),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-          
-          // Tab 3: Mastery Analytics
-          analytics.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('Error loading mastery data: $err')),
-            data: (_) {
-              return OutcomeMasteryTab(examId: _examId);
-            },
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 }
 
@@ -222,81 +248,81 @@ class _Dashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 700;
-
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 16, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Total Violations card
-          _SummaryCard(totalViolations: summary.totalViolations),
-          const SizedBox(height: 16),
-
-          // ── Violation Breakdown
-          if (summary.byType.isNotEmpty) ...[
-            _SectionTitle(
-              icon: Icons.bar_chart_rounded,
-              label: 'Violation Breakdown',
-            ),
-            const SizedBox(height: 8),
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: summary.byType
-                      .map(
-                        (s) => ViolationTypeTile(
-                          stat: s,
-                          totalViolations: summary.totalViolations,
-                        ),
-                      )
-                      .toList(),
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 800,
+          ), // Responsive Centering
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SummaryCard(totalViolations: summary.totalViolations),
+              const SizedBox(height: 24),
+              if (summary.byType.isNotEmpty) ...[
+                const _SectionTitle(
+                  icon: Icons.analytics_outlined,
+                  label: 'Violation Breakdown',
                 ),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 0,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: summary.byType
+                          .map(
+                            (s) => ViolationTypeTile(
+                              stat: s,
+                              totalViolations: summary.totalViolations,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+              const _SectionTitle(
+                icon: Icons.people_outline,
+                label: 'Student Oversight',
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // ── Top Students
-          _SectionTitle(
-            icon: Icons.emoji_events_outlined,
-            label: 'Top Students · Most Violations',
+              const SizedBox(height: 12),
+              if (summary.topStudents.isEmpty)
+                const _EmptyState(
+                  icon: Icons.verified_user_outlined,
+                  message: 'No violations detected.',
+                )
+              else
+                Card(
+                  elevation: 0,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: summary.topStudents.length,
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: Colors.grey.shade100),
+                    itemBuilder: (context, i) => _StudentTile(
+                      student: summary.topStudents[i],
+                      onView: () => onViewStudent(summary.topStudents[i]),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
-          if (summary.topStudents.isEmpty)
-            _EmptyState(
-              icon: Icons.check_circle_outline,
-              message: 'No violations recorded for this exam.',
-            )
-          else
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 2,
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: summary.topStudents.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, i) {
-                  final s = summary.topStudents[i];
-                  return _StudentTile(
-                    rank: i + 1,
-                    student: s,
-                    onView: () => onViewStudent(s),
-                  );
-                },
-              ),
-            ),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }
@@ -307,65 +333,65 @@ class _Dashboard extends StatelessWidget {
 // ──────────────────────────────────────────────
 class _SummaryCard extends StatelessWidget {
   final int totalViolations;
-
   const _SummaryCard({required this.totalViolations});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.red.withOpacity(.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.red.shade700, Colors.red.shade900],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF673AB7), Color(0xFF512DA8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF673AB7).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.15),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.warning_amber_rounded,
-                size: 32,
-                color: Colors.white,
-              ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(width: 20),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$totalViolations',
-                  style: const TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1,
-                  ),
-                ),
-                const Text(
-                  'Total Violations',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            child: const Icon(
+              Icons.security_rounded,
+              size: 32,
+              color: Colors.white,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$totalViolations',
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Text(
+                'Incident Alerts Detected',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -401,85 +427,62 @@ class _SectionTitle extends StatelessWidget {
 //  Student row tile
 // ──────────────────────────────────────────────
 class _StudentTile extends StatelessWidget {
-  final int rank;
   final TopStudentStat student;
   final VoidCallback onView;
 
-  const _StudentTile({
-    required this.rank,
-    required this.student,
-    required this.onView,
-  });
-
-  Color _riskColor(int count) {
-    if (count >= 5) return Colors.red;
-    if (count >= 3) return Colors.orange;
-    return Colors.green;
-  }
-
-  String _riskLabel(int count) {
-    if (count >= 5) return 'High';
-    if (count >= 3) return 'Medium';
-    return 'Low';
-  }
+  const _StudentTile({required this.student, required this.onView});
 
   @override
   Widget build(BuildContext context) {
-    final riskColor = _riskColor(student.violationCount);
+    // Using a deep violet for maximum visibility on white
+    const Color textPrimary = Color(0xFF311B92);
+    const Color textSecondary = Color(0xFF616161);
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: const Color(0xFFEDE7F6),
         child: Text(
           student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            color: Color(0xFF673AB7),
           ),
         ),
       ),
       title: Text(
         student.name,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: textPrimary, // Explicit dark color
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
       ),
-      subtitle: Row(
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: riskColor.withOpacity(.12),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '${_riskLabel(student.violationCount)} Risk',
-              style: TextStyle(
-                fontSize: 11,
-                color: riskColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+      subtitle: Text(
+        '${student.violationCount} Violations',
+        style: const TextStyle(
+          color: textSecondary, // Visible grey
+          fontWeight: FontWeight.w500,
+        ),
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Chip(
-            label: Text(
-              '${student.violationCount}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            backgroundColor: riskColor,
+      trailing: SizedBox(
+        width: 80, // Fixed width to keep buttons uniform
+        child: ElevatedButton(
+          onPressed: onView,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFF3E5F5),
+            foregroundColor: const Color(0xFF673AB7),
+            elevation: 0,
             padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onView, child: const Text('View')),
-        ],
+          child: const Text(
+            'View',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ),
     );
   }

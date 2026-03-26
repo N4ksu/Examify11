@@ -17,7 +17,8 @@ class TeacherDashboard extends ConsumerStatefulWidget {
 
 class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   bool _sidebarOpen = false;
-  String _selectedPage = 'classes'; // 'classes' | 'analytics' | 'retake_requests'
+  String _selectedPage =
+      'classes'; // 'classes' | 'analytics' | 'retake_requests'
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +58,8 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                                 child: GlobalAnalyticsSection(),
                               )
                             : _selectedPage == 'retake_requests'
-                                    ? const RetakeRequestsScreen()
-                                    : classroomsAsync.when(
+                            ? const RetakeRequestsScreen()
+                            : classroomsAsync.when(
                                 data: (classrooms) =>
                                     _buildClassesArea(context, classrooms),
                                 loading: () => const Center(
@@ -233,14 +234,21 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           ),
           const SizedBox(width: 18),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 28),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
             tooltip: 'Refresh All Data',
             onPressed: () {
               ref.invalidate(classroomsProvider);
               ref.invalidate(pendingRetakeRequestsProvider);
               // Add other providers here if needed
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Refreshing dashboard data...'), duration: Duration(seconds: 1)),
+                const SnackBar(
+                  content: Text('Refreshing dashboard data...'),
+                  duration: Duration(seconds: 1),
+                ),
               );
             },
           ),
@@ -345,7 +353,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
       ],
     );
   }
-
 
   Widget _buildSidebarItem({
     required IconData icon,
@@ -594,7 +601,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     );
   }
 
-
   void _showCreateClassroomDialog(BuildContext context) {
     final nameController = TextEditingController();
     final descController = TextEditingController();
@@ -717,4 +723,3 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     );
   }
 }
-

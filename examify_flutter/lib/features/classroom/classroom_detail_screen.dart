@@ -61,13 +61,16 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final classroomAsync = ref.watch(classroomDetailProvider(widget.id));
-    final assessmentsAsync = ref.watch(assessmentsProvider(int.parse(widget.id)));
+    final assessmentsAsync = ref.watch(
+      assessmentsProvider(int.parse(widget.id)),
+    );
 
     // Update assessment IDs for polling
     assessmentsAsync.whenData((assessments) {
       final ids = assessments.map((a) => a.id).toList();
       // Only update if the list has changed to avoid unnecessary rebuilds
-      if (_assessmentIds.length != ids.length || !_assessmentIds.every((id) => ids.contains(id))) {
+      if (_assessmentIds.length != ids.length ||
+          !_assessmentIds.every((id) => ids.contains(id))) {
         Future.microtask(() {
           if (mounted) {
             setState(() {
@@ -109,9 +112,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                   clipBehavior: Clip.hardEdge,
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    border: Border(
-                      right: BorderSide(color: Color(0xFFE8E8E8)),
-                    ),
+                    border: Border(right: BorderSide(color: Color(0xFFE8E8E8))),
                   ),
                   child: SizedBox(
                     width: 240,
@@ -120,8 +121,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                       children: [
                         // Classroom name header
                         Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(14, 16, 14, 10),
+                          padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
                           child: classroomAsync.when(
                             data: (classroom) => Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -162,21 +162,18 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                         // Navigation items
                         Expanded(
                           child: ListView.builder(
-                            padding:
-                                const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.only(top: 4),
                             itemCount: tabs.length,
                             itemBuilder: (context, index) {
-                              final isSelected =
-                                  _selectedIndex == index;
+                              final isSelected = _selectedIndex == index;
                               final tab = tabs[index];
                               return _SidebarNavItem(
                                 icon: tab['icon'] as IconData,
                                 label: tab['label'] as String,
                                 isSelected: isSelected,
-                                showChevron:
-                                    isSelected && index == 0,
-                                onTap: () => setState(() =>
-                                    _selectedIndex = index),
+                                showChevron: isSelected && index == 0,
+                                onTap: () =>
+                                    setState(() => _selectedIndex = index),
                               );
                             },
                           ),
@@ -185,7 +182,10 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                         // User info at bottom
                         Container(
                           margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -195,8 +195,9 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 16,
-                                backgroundColor:
-                                    const Color(0xFF9068F5), // Softer purple
+                                backgroundColor: const Color(
+                                  0xFF9068F5,
+                                ), // Softer purple
                                 child: Icon(
                                   Icons.email_outlined,
                                   color: Colors.white,
@@ -206,15 +207,13 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       user?.email ?? 'user@email.com',
                                       maxLines: 1,
-                                      overflow:
-                                          TextOverflow.ellipsis,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -244,8 +243,9 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                   child: Container(
                     color: const Color(0xFFF5F5F5),
                     child: IndexedStack(
-                        index: _selectedIndex,
-                        children: screens),
+                      index: _selectedIndex,
+                      children: screens,
+                    ),
                   ),
                 ),
               ],
@@ -256,19 +256,14 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
     );
   }
 
-  Widget _buildTopBar(
-      BuildContext context, AsyncValue classroomAsync) {
+  Widget _buildTopBar(BuildContext context, AsyncValue classroomAsync) {
     return Container(
       height: 92,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.centerRight,
-          colors: [
-            Color(0xFF7B1FA2),
-            Color(0xFF9C27B0),
-            Color(0xFFAB47BC),
-          ],
+          colors: [Color(0xFF6A40F2), Color(0xFF8D43F0), Color(0xFFA74DE9)],
         ),
       ),
       child: Stack(
@@ -297,11 +292,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                   child: const SizedBox(
                     width: 56,
                     height: 64,
-                    child: Icon(
-                      Icons.menu,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                    child: Icon(Icons.menu, color: Colors.white, size: 24),
                   ),
                 ),
                 Image.asset('assets/cite_logo.png', height: 44),
@@ -362,7 +353,10 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                         ref.invalidate(assessmentStatusProvider(id));
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Status refreshed'), duration: Duration(seconds: 1)),
+                        const SnackBar(
+                          content: Text('Status refreshed'),
+                          duration: Duration(seconds: 1),
+                        ),
                       );
                     },
                   ),
@@ -403,9 +397,7 @@ class _SidebarNavItem extends StatelessWidget {
         height: 48,
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white
-              : Colors.transparent,
+          color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: isSelected
               ? Border.all(color: Colors.grey.shade300, width: 1.0)
@@ -416,7 +408,7 @@ class _SidebarNavItem extends StatelessWidget {
                     color: Colors.black.withOpacity(0.04),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ]
               : null,
         ),
@@ -439,8 +431,7 @@ class _SidebarNavItem extends StatelessWidget {
                       ? const Color(0xFF7B1FA2)
                       : const Color(0xFF444444),
                   fontSize: 14,
-                  fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),

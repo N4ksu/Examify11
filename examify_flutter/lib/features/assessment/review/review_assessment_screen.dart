@@ -19,7 +19,8 @@ class ReviewAssessmentScreen extends ConsumerStatefulWidget {
       _ReviewAssessmentScreenState();
 }
 
-class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen> {
+class _ReviewAssessmentScreenState
+    extends ConsumerState<ReviewAssessmentScreen> {
   bool _isFinalizing = false;
 
   Future<void> _finalize() async {
@@ -27,7 +28,7 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
     try {
       final id = int.parse(widget.assessmentId);
       final api = ref.read(apiClientProvider);
-      
+
       // Validation: ensure at least one question exists
       final questions = await ref.read(questionsProvider(id).future);
       if (questions.isEmpty) {
@@ -44,15 +45,13 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
       }
 
       // Update is_published to true to "Assign" the exam
-      await api.patch('/assessments/$id', data: {
-        'is_published': true,
-      });
+      await api.patch('/assessments/$id', data: {'is_published': true});
 
       if (mounted) {
         // Find the classroomId to navigate back correctly
         final assessment = await ref.read(assessmentDetailProvider(id).future);
         ref.invalidate(assessmentsProvider(assessment.classroomId));
-        
+
         if (mounted) {
           // Navigate back to classroom detail and clear wizard stack
           context.go('/classroom/${assessment.classroomId}');
@@ -63,9 +62,9 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to assign exam: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to assign exam: $e')));
         setState(() => _isFinalizing = false);
       }
     }
@@ -79,7 +78,10 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: const Text('Review Assessment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Review Assessment',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF6E4CF5),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
@@ -92,7 +94,10 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
           Expanded(
             child: assessmentAsync.when(
               data: (assessment) => SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 600),
@@ -115,9 +120,20 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
                           _buildSectionHeader('General Information'),
                           _buildInfoCard([
                             _buildInfoRow('Title', assessment.title),
-                            _buildInfoRow('Description', assessment.description.isEmpty ? 'No description' : assessment.description),
-                            _buildInfoRow('Time Limit', '${assessment.timeLimitMinutes} minutes'),
-                            _buildInfoRow('Show Score', assessment.showScore ? 'Yes' : 'No'),
+                            _buildInfoRow(
+                              'Description',
+                              assessment.description.isEmpty
+                                  ? 'No description'
+                                  : assessment.description,
+                            ),
+                            _buildInfoRow(
+                              'Time Limit',
+                              '${assessment.timeLimitMinutes} minutes',
+                            ),
+                            _buildInfoRow(
+                              'Show Score',
+                              assessment.showScore ? 'Yes' : 'No',
+                            ),
                           ]),
                           const SizedBox(height: 32),
                           _buildSectionHeader('Questions Summary'),
@@ -160,7 +176,11 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1E293B),
+        ),
       ),
     );
   }
@@ -186,10 +206,22 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.bold)),
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Color(0xFF334155),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -203,34 +235,67 @@ class _ReviewAssessmentScreenState extends ConsumerState<ReviewAssessmentScreen>
         return questionsAsync.when(
           data: (questions) {
             if (questions.isEmpty) {
-              return const Text('No questions added yet.', style: TextStyle(fontStyle: FontStyle.italic));
+              return const Text(
+                'No questions added yet.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              );
             }
-            
-            final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points);
-            
+
+            final totalPoints = questions.fold<int>(
+              0,
+              (sum, q) => sum + q.points,
+            );
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total: ${questions.length} questions (${totalPoints} points)', 
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF6E4CF5))),
+                Text(
+                  'Total: ${questions.length} questions (${totalPoints} points)',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6E4CF5),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 ...questions.asMap().entries.map((entry) {
                   final idx = entry.key + 1;
                   final q = entry.value;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: const Color.fromARGB(255, 207, 207, 207),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade100),
+                      border: Border.all(
+                        color: const Color.fromARGB(255, 5, 5, 5),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        Text('Q$idx', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                        Text(
+                          'Q$idx',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(255, 0, 0, 0),
+                          ),
+                        ),
                         const SizedBox(width: 12),
-                        Expanded(child: Text(q.type.replaceAll('_', ' ').toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                        Text('${q.points} pts', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Expanded(
+                          child: Text(
+                            q.type.replaceAll('_', ' ').toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${q.points} pts',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
                       ],
                     ),
                   );
