@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'token_interceptor.dart';
+import 'error_interceptor.dart';
 
 // Provides the SharedPreferences instance synchronously (requires override in main.dart)
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -26,6 +27,7 @@ final apiClientProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.add(TokenInterceptor(dio: dio, prefs: prefs));
+  dio.interceptors.add(ErrorInterceptor());
   dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
 
   return dio;

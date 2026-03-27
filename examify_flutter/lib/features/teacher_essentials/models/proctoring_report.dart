@@ -4,11 +4,13 @@ class ProctoringReport {
   final User student;
   final int totalViolations;
   final List<ProctoringLogEntry> logs;
+  final List<ProctoringSnapshotEntry> snapshots;
 
   ProctoringReport({
     required this.student,
     required this.totalViolations,
     required this.logs,
+    required this.snapshots,
   });
 
   factory ProctoringReport.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,28 @@ class ProctoringReport {
               ?.map((e) => ProctoringLogEntry.fromJson(e))
               .toList() ??
           [],
+      snapshots:
+          (json['snapshots'] as List?)
+              ?.map((e) => ProctoringSnapshotEntry.fromJson(e))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class ProctoringSnapshotEntry {
+  final String url;
+  final DateTime capturedAt;
+
+  ProctoringSnapshotEntry({
+    required this.url,
+    required this.capturedAt,
+  });
+
+  factory ProctoringSnapshotEntry.fromJson(Map<String, dynamic> json) {
+    return ProctoringSnapshotEntry(
+      url: json['url'],
+      capturedAt: DateTime.parse(json['captured_at']),
     );
   }
 }

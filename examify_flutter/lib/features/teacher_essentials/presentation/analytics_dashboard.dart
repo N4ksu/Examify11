@@ -57,7 +57,7 @@ class AnalyticsDashboard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFD8E3EF)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF223B6A).withOpacity(0.08),
+            color: const Color(0xFF223B6A).withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -123,7 +123,7 @@ class AnalyticsDashboard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.84),
+            color: Colors.white.withValues(alpha: 0.84),
             fontWeight: FontWeight.w600,
           ),
         ),

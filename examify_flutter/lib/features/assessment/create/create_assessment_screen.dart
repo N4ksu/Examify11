@@ -235,7 +235,7 @@ class _CreateAssessmentScreenState
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -267,7 +267,7 @@ class _CreateAssessmentScreenState
                             data: (outcomes) {
                               if (outcomes.isEmpty) return const SizedBox.shrink();
                               return DropdownButtonFormField<int>(
-                                value: _selectedOverallCourseOutcome,
+                                initialValue: _selectedOverallCourseOutcome,
                                 decoration: const InputDecoration(
                                   labelText: 'Overall Course Outcome (Optional)',
                                 ),
@@ -289,7 +289,7 @@ class _CreateAssessmentScreenState
                               );
                             },
                             loading: () => const LinearProgressIndicator(),
-                            error: (_, __) => const Text('Failed to load outcomes'),
+                            error: (_, _) => const Text('Failed to load outcomes'),
                           ),
                           const SizedBox(height: 16),
                           SwitchListTile(
@@ -305,7 +305,7 @@ class _CreateAssessmentScreenState
                               'If disabled, students will only see a confirmation message.',
                             ),
                             value: _showScore,
-                            activeColor: const Color(0xFF6E4CF5),
+                            activeThumbColor: const Color(0xFF6E4CF5),
                             onChanged: (val) {
                               setState(() => _showScore = val);
                             },

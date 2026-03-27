@@ -125,9 +125,9 @@ class StreamTab extends ConsumerWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.15),
+                  Colors.white.withValues(alpha: 0.15),
                   Colors.transparent,
-                  Colors.white.withOpacity(0.05),
+                  Colors.white.withValues(alpha: 0.05),
                 ],
               ),
             ),
@@ -140,7 +140,7 @@ class StreamTab extends ConsumerWidget {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -205,7 +205,7 @@ class StreamTab extends ConsumerWidget {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -314,13 +314,16 @@ class StreamTab extends ConsumerWidget {
                   nameController.text,
                   descController.text,
                 );
+                if (!dialogCtx.mounted) return;
                 Navigator.pop(dialogCtx);
                 ref.invalidate(classroomDetailProvider(classroomId));
               } catch (e) {
+                if (!dialogCtx.mounted) return;
                 ScaffoldMessenger.of(dialogCtx).showSnackBar(
                   SnackBar(content: Text('Failed to update classroom: $e')),
                 );
               }
+
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1967D2),
@@ -345,7 +348,7 @@ class StreamTab extends ConsumerWidget {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -452,7 +455,7 @@ class StreamTab extends ConsumerWidget {
             border: Border.all(color: Colors.grey.shade300),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -516,7 +519,7 @@ class StreamTab extends ConsumerWidget {
               border: Border.all(color: Colors.grey.shade300),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -749,7 +752,7 @@ class _AnnouncementDialogState extends State<_AnnouncementDialog> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -836,7 +839,7 @@ class _AnnouncementDialogState extends State<_AnnouncementDialog> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: _attachedImages.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(width: 10),
                           itemBuilder: (context, i) {
                             final file = _attachedImages[i];
@@ -1182,7 +1185,7 @@ class _AnnouncementComposerState extends State<_AnnouncementComposer> {
             border: Border.all(color: Colors.grey.shade300),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               )
@@ -1246,7 +1249,7 @@ class _AnnouncementComposerState extends State<_AnnouncementComposer> {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1282,7 +1285,7 @@ class _AnnouncementComposerState extends State<_AnnouncementComposer> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _attachedImages.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
                         itemBuilder: (context, i) {
                           final file = _attachedImages[i];
                           return Stack(

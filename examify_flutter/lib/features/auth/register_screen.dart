@@ -22,7 +22,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _register() async {
     if (_formKey.currentState!.validate()) {
-      final success = await ref.read(authProvider.notifier).register(
+      final success = await ref
+          .read(authProvider.notifier)
+          .register(
             _nameController.text,
             _emailController.text,
             _passwordController.text,
@@ -102,10 +104,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(
-          color: Colors.black,
-          width: 1.6,
-        ),
+        border: Border.all(color: Colors.black, width: 1.6),
       ),
       child: Row(
         children: [
@@ -117,18 +116,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: Colors.black,
-              size: 16,
-            ),
+            child: Icon(icon, color: Colors.black, size: 16),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 1.2,
-            height: 24,
-            color: Colors.black,
-          ),
+          Container(width: 1.2, height: 24, color: Colors.black),
           const SizedBox(width: 8),
           Expanded(
             child: Theme(
@@ -167,10 +158,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
           if (trailing != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: trailing,
-            ),
+            Padding(padding: const EdgeInsets.only(right: 4), child: trailing),
           const SizedBox(width: 4),
         ],
       ),
@@ -183,10 +171,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(
-          color: Colors.black,
-          width: 1.6,
-        ),
+        border: Border.all(color: Colors.black, width: 1.6),
       ),
       child: Row(
         children: [
@@ -198,27 +183,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.school,
-              color: Colors.black,
-              size: 16,
-            ),
+            child: const Icon(Icons.school, color: Colors.black, size: 16),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 1.2,
-            height: 24,
-            color: Colors.black,
-          ),
+          Container(width: 1.2, height: 24, color: Colors.black),
           const SizedBox(width: 8),
           Expanded(
             child: DropdownButtonFormField<String>(
-              value: _role,
+              initialValue: _role,
               isDense: true,
-              icon: const Icon(
-                Icons.arrow_drop_down,
-                color: Colors.black,
-              ),
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
               dropdownColor: Colors.white,
               style: const TextStyle(
                 color: Colors.black,
@@ -234,14 +208,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 contentPadding: EdgeInsets.symmetric(vertical: 10),
               ),
               items: const [
-                DropdownMenuItem(
-                  value: 'student',
-                  child: Text('Student'),
-                ),
-                DropdownMenuItem(
-                  value: 'teacher',
-                  child: Text('Teacher'),
-                ),
+                DropdownMenuItem(value: 'student', child: Text('Student')),
+                DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
               ],
               onChanged: (val) {
                 if (val != null) {
@@ -264,17 +232,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/login_bg.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/login_bg.png', fit: BoxFit.cover),
           ),
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 4.8, sigmaY: 4.8),
-              child: Container(
-                color: Colors.black.withOpacity(0.07),
-              ),
+              child: Container(color: Colors.black.withValues(alpha: 0.07)),
             ),
           ),
           Positioned(
@@ -283,10 +246,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.asset(
-                  'assets/jmc_logo.png',
-                  height: 48,
-                ),
+                Image.asset('assets/jmc_logo.png', height: 48),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,14 +305,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFF5754D9).withOpacity(0.72),
-                      const Color(0xFFD564BF).withOpacity(0.68),
-                      const Color(0xFF5E436D).withOpacity(0.74),
+                      const Color(0xFF5754D9).withValues(alpha: 0.72),
+                      const Color(0xFFD564BF).withValues(alpha: 0.68),
+                      const Color(0xFF5E436D).withValues(alpha: 0.74),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
+                      color: Colors.black.withValues(alpha: 0.18),
                       blurRadius: 14,
                       offset: const Offset(0, 7),
                     ),
@@ -367,10 +327,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            'assets/cite_logo.png',
-                            height: 95,
-                          ),
+                          Image.asset('assets/cite_logo.png', height: 95),
                           const SizedBox(height: 6),
                           const Text(
                             'Create Account',

@@ -98,7 +98,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
               height: 260,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF8A62F4).withOpacity(0.07),
+                color: const Color(0xFF8A62F4).withValues(alpha: 0.07),
               ),
             ),
           ),
@@ -114,8 +114,8 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFFB8D7FF).withOpacity(0.10),
-                    const Color(0xFFE7C7FF).withOpacity(0.08),
+                    const Color(0xFFB8D7FF).withValues(alpha: 0.10),
+                    const Color(0xFFE7C7FF).withValues(alpha: 0.08),
                   ],
                 ),
               ),
@@ -369,8 +369,8 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.82),
-                const Color(0xFFF7FBFF).withOpacity(0.92),
+                Colors.white.withValues(alpha: 0.82),
+                const Color(0xFFF7FBFF).withValues(alpha: 0.92),
               ],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -450,7 +450,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
           border: Border.all(color: const Color(0xFFE1E8F2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -602,14 +602,17 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
               if (codeController.text.isEmpty) return;
 
               try {
-                final response = await ClassroomActions(ref).joinClassroom(codeController.text);
+                final response = await ClassroomActions(
+                  ref,
+                ).joinClassroom(codeController.text);
                 if (!context.mounted) return;
-                
-                final msg = response.data['message'] ?? 'Classroom joined successfully';
+
+                final msg =
+                    response.data['message'] ?? 'Classroom joined successfully';
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(msg)),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(msg)));
               } catch (e) {
                 if (!context.mounted) return;
                 String errorMsg = 'Failed to join classroom: $e';
@@ -619,9 +622,9 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                     errorMsg = data['message'];
                   }
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(errorMsg)),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(errorMsg)));
               }
             },
             style: ElevatedButton.styleFrom(

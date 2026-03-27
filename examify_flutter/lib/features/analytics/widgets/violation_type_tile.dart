@@ -75,7 +75,7 @@ class ViolationTypeTile extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(.65),
+                        ).colorScheme.onSurface.withValues(alpha: .65),
                       ),
                     ),
                   ],
@@ -86,7 +86,7 @@ class ViolationTypeTile extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: pct,
                     minHeight: 8,
-                    backgroundColor: color.withOpacity(.15),
+                    backgroundColor: color.withValues(alpha: .15),
                     valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
                 ),

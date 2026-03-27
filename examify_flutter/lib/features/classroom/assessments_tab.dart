@@ -459,7 +459,7 @@ class AssessmentsTab extends ConsumerWidget {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -476,7 +476,7 @@ class AssessmentsTab extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: const Color(0xFF6E4CF5).withOpacity(0.1),
+                  backgroundColor: const Color(0xFF6E4CF5).withValues(alpha: 0.1),
                   child: Icon(icon, color: const Color(0xFF6E4CF5), size: 22),
                 ),
                 const SizedBox(width: 16),
@@ -542,7 +542,7 @@ class AssessmentsTab extends ConsumerWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6E4CF5).withOpacity(0.1),
+                        color: const Color(0xFF6E4CF5).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(

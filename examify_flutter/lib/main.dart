@@ -25,22 +25,33 @@ import 'features/analytics/exam_analytics_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/assessment/manage/manage_questions_screen.dart';
 import 'features/assessment/review/review_assessment_screen.dart';
+import 'shared/widgets/examify_error_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Premium Error Handling
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return ExamifyErrorScreen(errorDetails: details);
+  };
+
   /// Desktop window size
-  if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
-    await windowManager.ensureInitialized();
-    WindowOptions windowOptions = const WindowOptions(
-      size: Size(1200, 800),
-      center: true,
-      title: 'Examify',
-    );
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
+  if (!kIsWeb) {
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      await windowManager.ensureInitialized();
+      WindowOptions windowOptions = const WindowOptions(
+        size: Size(1280, 800),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        titleBarStyle: TitleBarStyle.normal,
+        title: 'Examify',
+      );
+      windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
+    }
   }
 
   final prefs = await SharedPreferences.getInstance();

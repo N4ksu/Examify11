@@ -108,7 +108,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               height: 260,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF8A62F4).withOpacity(0.07),
+                color: const Color(0xFF8A62F4).withValues(alpha: 0.07),
               ),
             ),
           ),
@@ -124,8 +124,8 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFFB8D7FF).withOpacity(0.10),
-                    const Color(0xFFE7C7FF).withOpacity(0.08),
+                    const Color(0xFFB8D7FF).withValues(alpha: 0.10),
+                    const Color(0xFFE7C7FF).withValues(alpha: 0.08),
                   ],
                 ),
               ),
@@ -398,7 +398,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   ),
                 ),
               ),
-              if (trailing != null) trailing,
+              ?trailing,
               const SizedBox(width: 8),
             ],
           ],
@@ -419,8 +419,8 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.82),
-                const Color(0xFFF7FBFF).withOpacity(0.92),
+                Colors.white.withValues(alpha: 0.82),
+                const Color(0xFFF7FBFF).withValues(alpha: 0.92),
               ],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -499,7 +499,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           border: Border.all(color: const Color(0xFFE1E8F2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),

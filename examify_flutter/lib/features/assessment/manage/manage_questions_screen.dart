@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -122,7 +123,7 @@ class _ManageQuestionsScreenState extends ConsumerState<ManageQuestionsScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -191,7 +192,7 @@ class _ManageQuestionsScreenState extends ConsumerState<ManageQuestionsScreen> {
                                                     vertical: 6,
                                                   ),
                                                   decoration: BoxDecoration(
-                                                    color: const Color(0xFF6E4CF5).withOpacity(0.15),
+                                                    color: const Color(0xFF6E4CF5).withValues(alpha: 0.15),
                                                     borderRadius: BorderRadius.circular(8),
                                                   ),
                                                   child: Text(
@@ -419,7 +420,7 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
                 ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: const [
                   DropdownMenuItem(
@@ -448,7 +449,7 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
               if (_type == 'multiple_select') ...[
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _scoringMethod,
+                  initialValue: _scoringMethod,
                   decoration: const InputDecoration(labelText: 'Scoring Method'),
                   items: const [
                     DropdownMenuItem(

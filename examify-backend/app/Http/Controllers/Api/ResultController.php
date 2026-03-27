@@ -148,6 +148,9 @@ class ResultController extends Controller
                 'student:id,name,email',
                 'proctoringLogs' => function ($query) {
                     $query->orderBy('violation_number', 'asc');
+                },
+                'proctoringSnapshots' => function ($query) {
+                    $query->orderBy('captured_at', 'desc');
                 }
             ])
             ->get()
@@ -164,6 +167,12 @@ class ResultController extends Controller
                             'violation_number' => $log->violation_number,
                             'remark' => $log->remark,
                             'timestamp' => $log->timestamp ? $log->timestamp->toIso8601String() : null,
+                        ];
+                    }),
+                    'snapshots' => $attempt->proctoringSnapshots->map(function ($snap) {
+                        return [
+                            'url' => $snap->image_path,
+                            'captured_at' => $snap->captured_at ? $snap->captured_at->toIso8601String() : null,
                         ];
                     }),
                 ];

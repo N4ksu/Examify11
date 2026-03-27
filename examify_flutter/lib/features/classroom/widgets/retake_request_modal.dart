@@ -92,7 +92,7 @@ class _RetakeRequestModalState extends ConsumerState<RetakeRequestModal> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6200EE).withOpacity(0.1),
+                  color: const Color(0xFF6200EE).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(Icons.request_page_outlined, color: Color(0xFF6200EE)),

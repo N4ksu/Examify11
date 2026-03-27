@@ -75,7 +75,7 @@ class OutcomeMasteryTab extends ConsumerWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: analytics.strugglingStudents.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, i) {
                         return _StudentTile(student: analytics.strugglingStudents[i], rank: i + 1);
                       },
@@ -104,7 +104,7 @@ class _OverallMasteryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 4,
-      shadowColor: const Color(0xFF8E44AD).withOpacity(0.3),
+      shadowColor: const Color(0xFF8E44AD).withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: double.infinity,
@@ -122,7 +122,7 @@ class _OverallMasteryCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.15),
+                color: Colors.white.withValues(alpha: .15),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(Icons.school_rounded, size: 32, color: Colors.white),
@@ -224,7 +224,7 @@ class _MasteryBreakdownTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: masteryValue,
-              backgroundColor: const Color(0xFF8E44AD).withOpacity(0.15),
+              backgroundColor: const Color(0xFF8E44AD).withValues(alpha: 0.15),
               color: const Color(0xFF8E44AD),
               minHeight: 10,
             ),

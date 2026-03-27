@@ -99,10 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(
-          color: Colors.black,
-          width: 1.6,
-        ),
+        border: Border.all(color: Colors.black, width: 1.6),
       ),
       child: Row(
         children: [
@@ -114,24 +111,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: Colors.black,
-              size: 16,
-            ),
+            child: Icon(icon, color: Colors.black, size: 16),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 1.2,
-            height: 24,
-            color: Colors.black,
-          ),
+          Container(width: 1.2, height: 24, color: Colors.black),
           const SizedBox(width: 8),
           Expanded(
             child: Theme(
               data: Theme.of(context).copyWith(
-                textSelectionTheme:
-                    const TextSelectionThemeData(selectionColor: Colors.transparent),
+                textSelectionTheme: const TextSelectionThemeData(
+                  selectionColor: Colors.transparent,
+                ),
               ),
               child: TextFormField(
                 controller: controller,
@@ -157,17 +147,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   fillColor: Colors.white,
                   focusedBorder: InputBorder.none,
                   enabledBorder: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
               ),
             ),
           ),
           if (trailing != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: trailing,
-            ),
+            Padding(padding: const EdgeInsets.only(right: 4), child: trailing),
           const SizedBox(width: 4),
         ],
       ),
@@ -182,18 +168,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/login_bg.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/login_bg.png', fit: BoxFit.cover),
           ),
 
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 4.8, sigmaY: 4.8),
-              child: Container(
-                color: Colors.black.withOpacity(0.07),
-              ),
+              child: Container(color: Colors.black.withValues(alpha: 0.07)),
             ),
           ),
 
@@ -203,10 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.asset(
-                  'assets/jmc_logo.png',
-                  height: 48,
-                ),
+                Image.asset('assets/jmc_logo.png', height: 48),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,14 +244,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFF5754D9).withOpacity(0.72),
-                      const Color(0xFFD564BF).withOpacity(0.68),
-                      const Color(0xFF5E436D).withOpacity(0.74),
+                      const Color(0xFF5754D9).withValues(alpha: 0.72),
+                      const Color(0xFFD564BF).withValues(alpha: 0.68),
+                      const Color(0xFF5E436D).withValues(alpha: 0.74),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.18),
+                      color: Colors.black.withValues(alpha: 0.18),
                       blurRadius: 14,
                       offset: const Offset(0, 7),
                     ),
@@ -288,10 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            'assets/cite_logo.png',
-                            height: 100,
-                          ),
+                          Image.asset('assets/cite_logo.png', height: 100),
                           const SizedBox(height: 6),
                           const Text(
                             'XExamify',
@@ -442,7 +417,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   text: 'Sign up',
                                   size: 11,
                                   fillColor: const Color(0xFFD91A7A),
-                                  strokeColor: const Color.fromARGB(255, 146, 92, 121),
+                                  strokeColor: const Color.fromARGB(
+                                    255,
+                                    146,
+                                    92,
+                                    121,
+                                  ),
                                   strokeWidth: 1.0,
                                   weight: FontWeight.w900,
                                 ),

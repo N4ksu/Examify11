@@ -38,20 +38,43 @@ class ProctoringReportStudent {
 class ProctoringReport {
   final ProctoringReportStudent student;
   final List<ProctoringLogEntry> logs;
+  final List<ProctoringSnapshotEntry> snapshots;
   final int totalViolations;
 
   ProctoringReport({
     required this.student,
     required this.logs,
+    required this.snapshots,
     required this.totalViolations,
   });
 
   factory ProctoringReport.fromJson(Map<String, dynamic> json) {
     var logsList = json['logs'] as List? ?? [];
+    var snapshotsList = json['snapshots'] as List? ?? [];
     return ProctoringReport(
       student: ProctoringReportStudent.fromJson(json['student'] ?? {}),
       logs: logsList.map((x) => ProctoringLogEntry.fromJson(x)).toList(),
+      snapshots: snapshotsList.map((x) => ProctoringSnapshotEntry.fromJson(x)).toList(),
       totalViolations: json['total_violations'] ?? 0,
+    );
+  }
+}
+
+class ProctoringSnapshotEntry {
+  final String url;
+  final DateTime capturedAt;
+
+  ProctoringSnapshotEntry({
+    required this.url,
+    required this.capturedAt,
+  });
+
+  factory ProctoringSnapshotEntry.fromJson(Map<String, dynamic> json) {
+    return ProctoringSnapshotEntry(
+      url: json['url'] ?? '',
+      capturedAt: DateTime.parse(
+        json['captured_at'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 }

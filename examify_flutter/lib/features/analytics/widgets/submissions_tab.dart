@@ -65,7 +65,7 @@ class SubmissionsTab extends ConsumerWidget {
               vertical: 24,
             ),
             itemCount: sortedResults.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
               final attempt = sortedResults[i];
               return _SubmissionTile(
@@ -136,7 +136,7 @@ class _SubmissionTile extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -154,7 +154,7 @@ class _SubmissionTile extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xFF6E4CF5).withOpacity(0.1),
+                  backgroundColor: const Color(0xFF6E4CF5).withValues(alpha: 0.1),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: const TextStyle(
@@ -228,7 +228,7 @@ class _SubmissionTile extends StatelessWidget {
                         style: TextButton.styleFrom(
                           minimumSize: Size.zero,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          backgroundColor: const Color(0xFF6E4CF5).withOpacity(0.08),
+                          backgroundColor: const Color(0xFF6E4CF5).withValues(alpha: 0.08),
                           foregroundColor: const Color(0xFF6E4CF5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),

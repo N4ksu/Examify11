@@ -109,7 +109,7 @@ class StudentViolationBottomSheet extends ConsumerWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: cs.onSurface.withOpacity(.2),
+              color: cs.onSurface.withValues(alpha: .2),
               borderRadius: BorderRadius.circular(99),
             ),
           ),
@@ -197,7 +197,7 @@ class StudentViolationBottomSheet extends ConsumerWidget {
                     vertical: 8,
                   ),
                   itemCount: events.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, i) {
                     final ev = events[i];
                     return ListTile(
@@ -207,7 +207,7 @@ class StudentViolationBottomSheet extends ConsumerWidget {
                       ),
                       leading: CircleAvatar(
                         radius: 18,
-                        backgroundColor: Colors.red.withOpacity(.12),
+                        backgroundColor: Colors.red.withValues(alpha: .12),
                         child: Icon(
                           _iconFor(ev.type),
                           size: 18,
@@ -222,7 +222,7 @@ class StudentViolationBottomSheet extends ConsumerWidget {
                         fmt.format(ev.createdAt),
                         style: TextStyle(
                           fontSize: 11,
-                          color: cs.onSurface.withOpacity(.6),
+                          color: cs.onSurface.withValues(alpha: .6),
                         ),
                       ),
                     );

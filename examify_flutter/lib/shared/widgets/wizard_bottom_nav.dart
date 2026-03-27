@@ -82,7 +82,7 @@ class WizardBottomNav extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isActive
                               ? const Color(0xFF6E4CF5)
-                              : const Color(0xFF6E4CF5).withOpacity(0.2),
+                              : const Color(0xFF6E4CF5).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                       ),

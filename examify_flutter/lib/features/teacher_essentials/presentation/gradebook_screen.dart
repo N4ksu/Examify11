@@ -91,7 +91,7 @@ class _GradebookBodyState extends State<_GradebookBody> {
           border: Border.all(color: const Color(0xFFD8E3EF)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF223B6A).withOpacity(0.08),
+              color: const Color(0xFF223B6A).withValues(alpha: 0.08),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),

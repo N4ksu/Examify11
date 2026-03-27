@@ -149,10 +149,10 @@ class CourseOutcomesTab extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF8E44AD).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFF8E44AD).withValues(alpha: 0.3)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF8E44AD).withOpacity(0.05),
+                        color: const Color(0xFF8E44AD).withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       )
@@ -163,7 +163,7 @@ class CourseOutcomesTab extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8E44AD).withOpacity(0.1),
+                          color: const Color(0xFF8E44AD).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(

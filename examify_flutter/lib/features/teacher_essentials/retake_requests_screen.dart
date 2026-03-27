@@ -62,7 +62,7 @@ class _RetakeRequestsScreenState extends ConsumerState<RetakeRequestsScreen> {
                       Text(
                         'Review student requests for exam retakes',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 14,
                         ),
                       ),
@@ -111,7 +111,7 @@ class _RetakeRequestsScreenState extends ConsumerState<RetakeRequestsScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -124,11 +124,11 @@ class _RetakeRequestsScreenState extends ConsumerState<RetakeRequestsScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              color: primaryViolet.withOpacity(0.05),
+                              color: primaryViolet.withValues(alpha: 0.05),
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: primaryViolet.withOpacity(0.1),
+                                    backgroundColor: primaryViolet.withValues(alpha: 0.1),
                                     child: const Icon(Icons.person, color: primaryViolet, size: 20),
                                   ),
                                   const SizedBox(width: 12),
@@ -250,7 +250,7 @@ class _RetakeRequestsScreenState extends ConsumerState<RetakeRequestsScreen> {
     try {
       final api = ref.read(apiClientProvider);
       await api.post('/retake-requests/$id/$action');
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Request ${action == 'approve' ? 'approved' : 'denied'} successfully'),
@@ -260,7 +260,7 @@ class _RetakeRequestsScreenState extends ConsumerState<RetakeRequestsScreen> {
         ref.invalidate(pendingRetakeRequestsProvider);
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to $action request: $e'), backgroundColor: Colors.red),
         );

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'teacher' => \App\Http\Middleware\TeacherOnly::class,
             'student' => \App\Http\Middleware\StudentOnly::class,
+            'valid.exam.session' => \App\Http\Middleware\EnsureValidExamSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

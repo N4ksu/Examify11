@@ -107,7 +107,7 @@ class _ReviewAssessmentScreenState
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -250,7 +250,7 @@ class _ReviewAssessmentScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Total: ${questions.length} questions (${totalPoints} points)',
+                  'Total: ${questions.length} questions ($totalPoints points)',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF6E4CF5),
@@ -304,7 +304,7 @@ class _ReviewAssessmentScreenState
             );
           },
           loading: () => const LinearProgressIndicator(),
-          error: (_, __) => const Text('Error loading questions'),
+          error: (_, _) => const Text('Error loading questions'),
         );
       },
     );

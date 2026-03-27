@@ -1,21 +1,24 @@
+// ignore_for_file: deprecated_member_use
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_windows/webview_windows.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../../core/proctoring/proctoring_service.dart';
 import '../../../core/api/api_client.dart';
+import 'package:camera/camera.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/violation_banner.dart';
-
+import '../../../shared/widgets/security_watermark.dart';
+import 'widgets/sync_status_indicator.dart';
+import 'widgets/session_locked_overlay.dart';
 import '../../../shared/models/assessment.dart';
 import '../../../shared/models/question.dart';
 import '../../../shared/providers/assessment_provider.dart';
-
+import '../../../shared/providers/auth_provider.dart';
+import '../../../core/sync/sync_provider.dart';
 class TakeAssessmentScreen extends ConsumerStatefulWidget {
   final String assessmentId;
   final int attemptId;
@@ -32,8 +35,7 @@ class TakeAssessmentScreen extends ConsumerStatefulWidget {
       _TakeAssessmentScreenState();
 }
 
-class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
-  late ProctoringService _proctoringService;
+class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> with WidgetsBindingObserver {
   int _violationCount = 0;
   int _currentQuestionIndex = 0;
   final Map<int, Set<int>> _selectedAnswers =
@@ -47,106 +49,112 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
   bool _isInitialized = false;
   bool _isQuestionsInitialized = false;
 
-  late final WebViewController _flutterController;
-  final WebviewController _windowsController = WebviewController();
-  bool _isWindowsInitialized = false;
 
-  // Interactive Overlay State
-  Offset _overlayPosition = const Offset(24, 100); // Relative to top-left
-  Size _overlaySize = const Size(320, 240);
-  bool _isOverlayFullScreen = false;
+  // Camera tracking
+  CameraController? _cameraController;
+  Timer? _focusTimer;
+  int _violationStrikes = 0;
 
   List<Question>? _loadedQuestions;
 
   @override
   void initState() {
     super.initState();
-    _initProctoring();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.roomName != null) {
       _requestPermissions();
-      _initWebView();
+    }
+    _initCamera();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      if (_focusTimer != null && _focusTimer!.isActive) return;
+      
+      _focusTimer = Timer(const Duration(seconds: 3), () {
+        if (!mounted) return;
+        setState(() {
+          _violationStrikes++;
+          _violationCount = _violationStrikes;
+        });
+
+        if (_violationStrikes == 1) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('⚠️ Warning 1/3'),
+              content: const Text('You left the exam window. Do not switch tabs or open other apps.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('I Understand'),
+                ),
+              ],
+            ),
+          );
+          return;
+        } else if (_violationStrikes == 2) {
+          if (_cameraController != null && _cameraController!.value.isInitialized) {
+            ref.read(syncProvider.notifier).captureSnapshot(
+                  widget.attemptId, 
+                  isViolation: true, 
+                  customCaption: "🚨 **STRIKE 2: TAB SWITCH DETECTED**",
+                );
+          }
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('🚨 Warning 2/3'),
+              content: const Text('Violation recorded and sent to your instructor. One more violation will terminate your exam.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('I Understand'),
+                ),
+              ],
+            ),
+          );
+          return;
+        } else if (_violationStrikes >= 3) {
+          if (_cameraController != null && _cameraController!.value.isInitialized) {
+            ref.read(syncProvider.notifier).captureSnapshot(
+                  widget.attemptId, 
+                  isViolation: true, 
+                  customCaption: "⛔ **STRIKE 3: EXAM TERMINATED**",
+                );
+          }
+          // Force auto-submit immediately
+          _submit(autoSubmit: true, questions: _loadedQuestions);
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('⛔ Exam Terminated'),
+              content: const Text('You have been locked out due to multiple tab-switching violations.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Exit'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      });
+    } else if (state == AppLifecycleState.resumed) {
+      if (_focusTimer != null && _focusTimer!.isActive) {
+        _focusTimer!.cancel();
+        debugPrint("Micro-distraction recovered");
+      }
     }
   }
 
   Future<void> _requestPermissions() async {
-    await [Permission.camera, Permission.microphone].request();
-  }
-
-  Future<void> _initWebView() async {
-    final url =
-        'https://meet.jit.si/${widget.roomName}#config.prejoinPageEnabled=false&config.requireDisplayName=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.disableDeepLinking=true&userInfo.displayName=Student';
-
-    if (Platform.isWindows) {
-      try {
-        await _windowsController.initialize();
-        await _windowsController.loadUrl(url);
-        await _windowsController.executeScript('''
-          function autoJoin() {
-            const joinButton = Array.from(document.querySelectorAll('button')).find(b => 
-              b.innerText.toLowerCase().includes('join') || 
-              b.ariaLabel?.toLowerCase().includes('join')
-            );
-            if (joinButton) { joinButton.click(); }
-          }
-          setInterval(autoJoin, 1000);
-        ''');
-        if (mounted) {
-          setState(() {
-            _isWindowsInitialized = true;
-          });
-        }
-      } catch (e) {
-        debugPrint('WebView Error: $e');
-      }
-    } else {
-      _flutterController = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onPageFinished: (url) {
-              _flutterController.runJavaScript('''
-                function autoJoin() {
-                  const joinButton = Array.from(document.querySelectorAll('button')).find(b => 
-                    b.innerText.toLowerCase().includes('join') || 
-                    b.ariaLabel?.toLowerCase().includes('join')
-                  );
-                  if (joinButton) { joinButton.click(); }
-                }
-                setInterval(autoJoin, 1000);
-              ''');
-            },
-          ),
-        )
-        ..loadRequest(Uri.parse(url));
-      if (mounted) setState(() {});
-    }
-  }
-
-  Future<WebviewPermissionDecision> _onPermissionRequested(
-    String url,
-    WebviewPermissionKind kind,
-    bool isUserInitiated,
-  ) async {
-    final decision = await showDialog<WebviewPermissionDecision>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('WebView permission requested'),
-        content: Text('Allow access to $kind?'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () =>
-                Navigator.pop(context, WebviewPermissionDecision.deny),
-            child: const Text('Deny'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.pop(context, WebviewPermissionDecision.allow),
-            child: const Text('Allow'),
-          ),
-        ],
-      ),
-    );
-    return decision ?? WebviewPermissionDecision.none;
+    await [Permission.camera].request();
   }
 
   void _initTimer(int minutes) {
@@ -165,45 +173,43 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
     _isInitialized = true;
   }
 
-  void _initProctoring() {
-    _proctoringService = ProctoringService(
-      attemptId: widget.attemptId,
-      apiClient: ref.read(apiClientProvider),
-      onViolation: (action) {
-        if (!mounted) return;
-        setState(() {
-          _violationCount = _proctoringService.violationCount;
-        });
+  Future<void> _initCamera() async {
+    try {
+      // 1. Initialize Webcam (for the PiP display)
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        final frontCamera = cameras.firstWhere(
+          (c) => c.lensDirection == CameraLensDirection.front,
+          orElse: () => cameras.first,
+        );
 
-        if (action == ProctoringAction.warn ||
-            action == ProctoringAction.finalWarn) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '⚠️ Warning: Focus loss detected. Please stay on the exam screen.',
-                style: TextStyle(color: Colors.white),
-              ),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        } else if (action == ProctoringAction.autoSubmitted) {
-          _submit(autoSubmit: true, questions: _loadedQuestions);
-        }
-      },
-    );
-    _proctoringService.start();
-    // Sync initial overlay state
-    _proctoringService.overlayPosition = _overlayPosition;
-    _proctoringService.overlaySize = _overlaySize;
-    _proctoringService.isOverlayFullScreen = _isOverlayFullScreen;
+        _cameraController = CameraController(
+          frontCamera,
+          ResolutionPreset.low,
+          enableAudio: false,
+        );
+
+        await _cameraController!.initialize();
+        if (mounted) setState(() {});
+      }
+
+      // 2. Delegate proctoring capture to SyncProvider
+      ref.read(syncProvider.notifier).startCapture(_cameraController, widget.attemptId);
+    } catch (e) {
+      debugPrint('Camera/Screen init error: $e');
+    }
   }
+
 
   @override
   void dispose() {
+    _focusTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
-    _proctoringService.stop();
-    if (Platform.isWindows) {
-      _windowsController.dispose();
+    ref.read(syncProvider.notifier).stopCapture();
+    _cameraController?.dispose();
+    
+    if (!kIsWeb) {
       // Ensure local window manager flags are reset even if service fails
       _resetWindowManager();
     }
@@ -341,7 +347,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
           width: 12,
           height: 12,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             border: Border.all(color: color),
             borderRadius: BorderRadius.circular(3),
           ),
@@ -371,9 +377,49 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
     }
   }
 
+  void _syncAnswerForQuestion(Question q, int index) {
+      final attemptId = widget.attemptId;
+      final List<Map<String, dynamic>> answerData = [];
+      
+      if (q.type == 'essay') {
+          answerData.add({
+              'question_id': q.id,
+              'text_response': _essayAnswers[index] ?? '',
+          });
+      } else if (q.type == 'multiple_select') {
+          final selectedIndices = _selectedAnswers[index] ?? {};
+          for (final idx in selectedIndices) {
+              answerData.add({'question_id': q.id, 'option_id': q.options[idx].id});
+          }
+      } else {
+          final selectedSet = _selectedAnswers[index];
+          final selectedIdx = (selectedSet != null && selectedSet.isNotEmpty)
+              ? selectedSet.first
+              : null;
+          if (selectedIdx != null) {
+              answerData.add({
+                  'question_id': q.id,
+                  'option_id': q.options[selectedIdx].id,
+              });
+          }
+      }
+      
+      ref.read(syncProvider.notifier).saveAnswerLocally(attemptId, q.id, answerData);
+      
+      // Show snackbar if transitioning to offline
+      final syncState = ref.read(syncProvider);
+      if (!syncState.isOnline) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Working Offline - Answers Saved Locally'),
+                duration: Duration(seconds: 2),
+              )
+          );
+      }
+  }
+
   void _submit({bool autoSubmit = false, List<Question>? questions}) async {
     _timer?.cancel();
-    await _proctoringService.stop();
 
     if (questions != null) {
       final answers = <Map<String, dynamic>>[];
@@ -416,6 +462,10 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
         );
       } catch (e) {
         if (!mounted) return;
+        if (e.toString().contains('403') || e.toString().contains('Session Hijacking')) {
+           ref.read(syncProvider.notifier).markSessionLocked();
+           return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to submit assessment: $e')),
         );
@@ -432,6 +482,11 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final syncState = ref.watch(syncProvider);
+    if (syncState.isSessionLocked) {
+       return SessionLockedOverlay(attemptId: widget.attemptId);
+    }
+    
     final assessmentAsync = ref.watch(
       assessmentDetailProvider(int.parse(widget.assessmentId)),
     );
@@ -472,159 +527,46 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildWebview() {
-    if (Platform.isWindows) {
-      if (!_isWindowsInitialized) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      return Webview(
-        _windowsController,
-        permissionRequested: _onPermissionRequested,
-      );
-    } else {
-      return WebViewWidget(controller: _flutterController);
-    }
-  }
-
   Widget _buildMainLayout(BuildContext context, Assessment assessment) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Stack(
           children: [
             _buildExamUI(context, assessment),
-            if (widget.roomName != null && widget.roomName!.isNotEmpty)
-              _isOverlayFullScreen
-                  ? _buildFullScreenOverlay()
-                  : _buildFloatingOverlay(constraints),
+            _buildCameraPiP(),
           ],
         );
       },
     );
   }
 
-  Widget _buildFullScreenOverlay() {
-    return MouseRegion(
-      onEnter: (_) => _proctoringService.isMouseInJitsi = true,
-      onExit: (_) => _proctoringService.isMouseInJitsi = false,
-      child: Container(
-        color: Colors.black,
-        child: Column(
-          children: [
-            _buildOverlayHeader(isFullScreen: true),
-            Expanded(child: _buildWebview()),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingOverlay(BoxConstraints constraints) {
+  Widget _buildCameraPiP() {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return const SizedBox.shrink();
+    }
     return Positioned(
-      top: _overlayPosition.dy,
-      left: _overlayPosition.dx,
-      child: MouseRegion(
-        onEnter: (_) => _proctoringService.isMouseInJitsi = true,
-        onExit: (_) => _proctoringService.isMouseInJitsi = false,
-        child: Material(
-          elevation: 8,
-          borderRadius: BorderRadius.circular(12),
-          clipBehavior: Clip.antiAlias,
-          child: Container(
-            width: _overlaySize.width,
-            height: _overlaySize.height,
-            color: Colors.black87,
-            child: Stack(
-              children: [
-                Column(
-                  children: [
-                    _buildOverlayHeader(isFullScreen: false),
-                    Expanded(child: _buildWebview()),
-                  ],
-                ),
-                // Resize handle
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onPanUpdate: (details) {
-                      setState(() {
-                        _overlaySize = Size(
-                          (_overlaySize.width + details.delta.dx)
-                              .clamp(200.0, 800.0),
-                          (_overlaySize.height + details.delta.dy)
-                              .clamp(150.0, 600.0),
-                        );
-                        _proctoringService.overlaySize = _overlaySize;
-                      });
-                    },
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      color: Colors.transparent,
-                      child: const Icon(
-                        Icons.south_east,
-                        size: 16,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverlayHeader({required bool isFullScreen}) {
-    return GestureDetector(
-      onPanUpdate: isFullScreen
-          ? null
-          : (details) {
-              setState(() {
-                _overlayPosition += details.delta;
-                _proctoringService.overlayPosition = _overlayPosition;
-              });
-            },
+      right: 16,
+      bottom: 16,
       child: Container(
-        color: const Color(0xFF6E4CF5),
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        child: Row(
-          children: [
-            const Icon(Icons.videocam, color: Colors.white, size: 16),
-            const SizedBox(width: 8),
-            const Text(
-              'Exam Monitoring',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(
-                isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                color: Colors.white,
-                size: 18,
-              ),
-              onPressed: () =>
-                  setState(() {
-                    _isOverlayFullScreen = !_isOverlayFullScreen;
-                    _proctoringService.isOverlayFullScreen = _isOverlayFullScreen;
-                  }),
-            ),
+        width: 120,
+        height: 160,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [
+            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
           ],
         ),
+        clipBehavior: Clip.hardEdge,
+        child: CameraPreview(_cameraController!),
       ),
     );
   }
 
   Widget _buildExamUI(BuildContext context, Assessment assessment) {
     final questions = assessment.questions;
+    final user = ref.watch(authProvider).user;
+    
     if (questions.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Assessment')),
@@ -637,8 +579,11 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
     final currentQuestion = questions[_currentQuestionIndex];
     final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
+    return SecurityWatermark(
+      userId: user?.id.toString() ?? 'Unknown User',
+      ipAddress: '127.0.0.1', // Placeholder for IP
+      child: Scaffold(
+        backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(80),
         child: Container(
@@ -676,7 +621,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
                         Text(
                           'Total Points: $totalPoints',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 12,
                           ),
                         ),
@@ -684,12 +629,42 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
                     ),
                   ),
                   Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const SyncStatusIndicator(),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Force Offline', style: TextStyle(color: Colors.white, fontSize: 10)),
+                      SizedBox(
+                        height: 24,
+                        child: Switch(
+                          value: !ref.watch(syncProvider).isOnline,
+                          activeThumbColor: Colors.orange,
+                          onChanged: (val) {
+                            ref.read(syncProvider.notifier).toggleForcedOffline(val);
+                            if (!val) {
+                               // Try to sync if coming back online
+                               ref.read(syncProvider.notifier).forceSync(widget.attemptId);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -707,7 +682,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                             color: _secondsRemaining < 60
-                                ? Colors.red.shade300
+                                ? Colors.red.withValues(alpha: 0.8)
                                 : Colors.white,
                           ),
                         ),
@@ -799,6 +774,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
                                             _essayAnswers[_currentQuestionIndex] =
                                                 val;
                                           });
+                                          _syncAnswerForQuestion(currentQuestion, _currentQuestionIndex);
                                         },
                                         controller: _essayController,
                                       ),
@@ -847,6 +823,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
                                                 _selectedAnswers[_currentQuestionIndex] =
                                                     currentSet;
                                               });
+                                              _syncAnswerForQuestion(currentQuestion, _currentQuestionIndex);
                                             },
                                           );
                                         }
@@ -890,6 +867,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
                                                     {val};
                                               }
                                             });
+                                            _syncAnswerForQuestion(currentQuestion, _currentQuestionIndex);
                                           },
                                         );
                                       },
@@ -950,6 +928,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> {
           _buildNavigationSidebar(questions),
         ],
       ),
+     ),
     );
   }
 }

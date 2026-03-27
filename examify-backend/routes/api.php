@@ -73,8 +73,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/questions/{question}', [App\Http\Controllers\Api\QuestionController::class, 'destroy'])->middleware('teacher');
 
     // Attempts & Proctoring API
-    Route::post('/attempts/{id}/submit', [StudentAttemptController::class, 'submit'])->middleware('student');
-    Route::post('/attempts/{id}/proctor-event', [StudentAttemptController::class, 'proctorEvent'])->middleware('student');
+    Route::prefix('attempts')->group(function () {
+        Route::post('/{attempt}/submit', [StudentAttemptController::class, 'submit'])->middleware(['student', 'valid.exam.session']);
+        Route::post('/{attempt}/proctor-event', [StudentAttemptController::class, 'proctorEvent'])->middleware(['student', 'valid.exam.session']);
+        Route::post('/{attempt}/save-answer', [StudentAttemptController::class, 'saveAnswer'])->middleware(['student', 'valid.exam.session']);
+        Route::post('/{attempt}/proctor-snapshots', [StudentAttemptController::class, 'storeProctorSnapshot'])->middleware(['student', 'valid.exam.session']);
+    });
     Route::post('/attempts/{id}/override-answer', [StudentAttemptController::class, 'overrideAnswer'])->middleware('teacher');
     Route::post('/start-exam/{id}', [AssessmentController::class, 'startExam'])->middleware('student');
 

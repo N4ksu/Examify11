@@ -28,12 +28,6 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
   }) : _platform = platform_impl.getPlatform();
 
   final ProctoringPlatform _platform;
-  
-  // Spatial awareness for overlay masking
-  Offset overlayPosition = const Offset(24, 100);
-  Size overlaySize = const Size(320, 240);
-  bool isOverlayFullScreen = false;
-  bool isMouseInJitsi = false;
 
   Future<void> start() async {
     if (_isProctoring) return;
@@ -43,12 +37,14 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
 
     if (kIsWeb) {
       _lockWeb();
-    } else if (Platform.isAndroid) {
-      await _lockAndroid();
-    } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      await _lockDesktop();
-    } else if (Platform.isIOS) {
-      await _lockIOS();
+    } else {
+      if (Platform.isAndroid) {
+        await _lockAndroid();
+      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        await _lockDesktop();
+      } else if (Platform.isIOS) {
+        await _lockIOS();
+      }
     }
   }
 
@@ -60,15 +56,17 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
 
     if (kIsWeb) {
       _unlockWeb();
-    } else if (Platform.isAndroid) {
-      await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      windowManager.removeListener(this);
-      await windowManager.setFullScreen(false);
-      await windowManager.setAlwaysOnTop(false);
-    } else if (Platform.isIOS) {
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    } else {
+      if (Platform.isAndroid) {
+        await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        windowManager.removeListener(this);
+        await windowManager.setFullScreen(false);
+        await windowManager.setAlwaysOnTop(false);
+      } else if (Platform.isIOS) {
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      }
     }
   }
 
@@ -82,23 +80,20 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      _checkViolationWithDelay(state == AppLifecycleState.paused ? 'app_background' : 'window_blur');
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _checkViolationWithDelay(
+        state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
+      );
     }
   }
 
   void _checkViolationWithDelay(String eventType) {
     if (!_isProctoring) return;
-    
+
     // 1-second delay to allow focus to settle and check mouse position
     Future.delayed(const Duration(milliseconds: 1000), () async {
       if (!_isProctoring) return;
-      
-      // If we are fullscreen monitoring or mouse is in Jitsi, ignore
-      if (isOverlayFullScreen || isMouseInJitsi) {
-        debugPrint('Ignoring $eventType: Interaction detected inside Jitsi overlay');
-        return;
-      }
 
       _reportViolation(eventType, remark: _getDefaultRemark(eventType));
     });
@@ -112,8 +107,10 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
   @override
   void onWindowBlur() {
     // Window lost focus on desktop (Alt-Tab)
-    if (_isProctoring && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
-      _checkViolationWithDelay('window_blur');
+    if (_isProctoring && !kIsWeb) {
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        _checkViolationWithDelay('window_blur');
+      }
     }
   }
 
@@ -167,32 +164,36 @@ class ProctoringService extends WindowListener with WidgetsBindingObserver {
       return _platform.getUserAgent();
     }
     final deviceInfo = DeviceInfoPlugin();
-    if (Platform.isAndroid) {
-      final info = await deviceInfo.androidInfo;
-      return '${info.manufacturer} ${info.model} (API ${info.version.sdkInt})';
-    } else if (Platform.isIOS) {
-      final info = await deviceInfo.iosInfo;
-      return '${info.name} ${info.systemVersion}';
-    } else if (Platform.isWindows) {
-      final info = await deviceInfo.windowsInfo;
-      return 'Windows ${info.majorVersion}.${info.minorVersion}';
-    } else if (Platform.isMacOS) {
-      final info = await deviceInfo.macOsInfo;
-      return 'macOS ${info.osRelease}';
-    } else if (Platform.isLinux) {
-      final info = await deviceInfo.linuxInfo;
-      return '${info.name} ${info.version}';
+    if (!kIsWeb) {
+      if (Platform.isAndroid) {
+        final info = await deviceInfo.androidInfo;
+        return '${info.manufacturer} ${info.model} (API ${info.version.sdkInt})';
+      } else if (Platform.isIOS) {
+        final info = await deviceInfo.iosInfo;
+        return '${info.name} ${info.systemVersion}';
+      } else if (Platform.isWindows) {
+        final info = await deviceInfo.windowsInfo;
+        return 'Windows ${info.majorVersion}.${info.minorVersion}';
+      } else if (Platform.isMacOS) {
+        final info = await deviceInfo.macOsInfo;
+        return 'macOS ${info.osRelease}';
+      } else if (Platform.isLinux) {
+        final info = await deviceInfo.linuxInfo;
+        return '${info.name} ${info.version}';
+      }
     }
     return 'Unknown Device';
   }
 
   String _getPlatformName() {
     if (kIsWeb) return 'Web';
-    if (Platform.isAndroid) return 'Android';
-    if (Platform.isIOS) return 'iOS';
-    if (Platform.isWindows) return 'Windows';
-    if (Platform.isMacOS) return 'macOS';
-    if (Platform.isLinux) return 'Linux';
+    if (!kIsWeb) {
+      if (Platform.isAndroid) return 'Android';
+      if (Platform.isIOS) return 'iOS';
+      if (Platform.isWindows) return 'Windows';
+      if (Platform.isMacOS) return 'macOS';
+      if (Platform.isLinux) return 'Linux';
+    }
     return 'Unknown';
   }
 

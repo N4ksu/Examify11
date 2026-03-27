@@ -18,6 +18,9 @@ class StudentAttempt extends Model
         'score',
         'started_at',
         'submitted_at',
+        'ip_address',
+        'user_agent',
+        'is_flagged_for_hijacking',
     ];
 
     protected $casts = [
@@ -43,6 +46,11 @@ class StudentAttempt extends Model
     public function proctoringLogs()
     {
         return $this->hasMany(ProctoringLog::class, 'attempt_id');
+    }
+
+    public function proctoringSnapshots()
+    {
+        return $this->hasMany(ProctoringSnapshot::class, 'attempt_id');
     }
 
     public function scopeFinished($query)

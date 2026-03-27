@@ -72,11 +72,13 @@ class _StudentReport {
   final int totalViolations;
   final _Status status;
   final List<_GroupedViolation> grouped;
+  final List<ProctoringSnapshotEntry> snapshots;
   const _StudentReport({
     required this.name,
     required this.totalViolations,
     required this.status,
     required this.grouped,
+    required this.snapshots,
   });
 }
 
@@ -133,6 +135,7 @@ class _ProctoringReportScreenState extends ConsumerState<ProctoringReportScreen>
         totalViolations: r.totalViolations,
         status: _statusFor(r.totalViolations),
         grouped: grouped,
+        snapshots: r.snapshots,
       );
     }).toList()..sort((a, b) => b.totalViolations.compareTo(a.totalViolations));
   }
@@ -402,6 +405,63 @@ class _StudentTileState extends State<_StudentTile> {
         // ── Expanded violations ─────────────────────
         if (_expanded) ...[
           Container(height: 1, color: _kBorder, margin: const EdgeInsets.symmetric(horizontal: 16)),
+          
+          // ── Snapshots section ─────────────────────
+          if (widget.report.snapshots.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                    children: [
+                      const Icon(Icons.camera_alt_rounded, size: 14, color: _kViolet),
+                      const SizedBox(width: 6),
+                      const Text('Proctoring Snapshots', 
+                          style: TextStyle(color: _kViolet, fontSize: 12, fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      Text('${widget.report.snapshots.length} images', 
+                          style: const TextStyle(color: _kTextSub, fontSize: 11)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.report.snapshots.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final snap = widget.report.snapshots[index];
+                        return Column(
+                          children: [
+                            Container(
+                              width: 140,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _kBorder),
+                                image: DecorationImage(
+                                  image: NetworkImage(snap.url),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(DateFormat('hh:mm a').format(snap.capturedAt), 
+                                style: const TextStyle(color: _kTextSub, fontSize: 10)),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(height: 1, color: _kBorder, margin: const EdgeInsets.symmetric(horizontal: 16)),
+          ],
+
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Column(children: [

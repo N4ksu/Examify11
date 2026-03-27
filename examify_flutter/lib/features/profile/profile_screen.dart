@@ -33,7 +33,7 @@ class ProfileScreen extends ConsumerWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withOpacity(0.35),
+                    Colors.white.withValues(alpha: 0.35),
                     const Color(0xFFF2F7FC),
                   ],
                 ),
@@ -62,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF223B6A).withOpacity(0.12),
+                            color: const Color(0xFF223B6A).withValues(alpha: 0.12),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),
@@ -72,7 +72,7 @@ class ProfileScreen extends ConsumerWidget {
                         children: [
                           CircleAvatar(
                             radius: 38,
-                            backgroundColor: Colors.white.withOpacity(0.18),
+                            backgroundColor: Colors.white.withValues(alpha: 0.18),
                             child: Text(
                               (user?.name.isNotEmpty == true
                                       ? user!.name[0]
@@ -102,7 +102,7 @@ class ProfileScreen extends ConsumerWidget {
                                 Text(
                                   user?.email ?? 'No email available',
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.88),
+                                    color: Colors.white.withValues(alpha: 0.88),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -116,7 +116,7 @@ class ProfileScreen extends ConsumerWidget {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.18),
+                              color: Colors.white.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
+import 'dart:html' as html;
 import '../../../core/api/api_client.dart';
 import '../../../shared/models/assessment.dart';
 import '../../../shared/providers/assessment_provider.dart';
@@ -18,72 +20,9 @@ class ConsentModal extends ConsumerStatefulWidget {
 class _ConsentModalState extends ConsumerState<ConsentModal> {
   bool _agreed = false;
   bool _isLoading = false;
+  bool _isCameraDenied = false;
   String? _roomName;
   int? _attemptId;
-
-  void _prepareExam() async {
-    if (_attemptId != null && _roomName != null) {
-      if (mounted) {
-        context.pushReplacement(
-          '/assessment/${widget.assessmentId}/take?attemptId=$_attemptId&roomName=$_roomName',
-        );
-      }
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final dio = ref.read(apiClientProvider);
-
-      // 1. Record Consent
-      try {
-        await dio.post('/assessments/${widget.assessmentId}/consent');
-      } catch (e) {
-        debugPrint('Consent check (possibly already recorded): $e');
-      }
-
-      // 2. Start Attempt
-      final response = await dio.post(
-        '/assessments/${widget.assessmentId}/start',
-      );
-      _attemptId = response.data['attempt_id'];
-
-      // Invalidate status & request providers to ensure UI is in sync
-      ref.invalidate(assessmentDetailProvider(int.parse(widget.assessmentId)));
-      ref.invalidate(
-          retakeRequestStatusProvider(int.parse(widget.assessmentId)));
-
-      // 3. Get Jitsi Room
-      final monitorResponse = await dio.post(
-        '/start-exam/${widget.assessmentId}',
-      );
-      _roomName = monitorResponse.data['room_name'];
-
-      if (mounted) {
-        context.pushReplacement(
-          '/assessment/${widget.assessmentId}/take?attemptId=$_attemptId&roomName=$_roomName',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        String message = 'Failed to start exam';
-        if (e is DioException && e.response?.statusCode == 403) {
-          message = e.response?.data['message'] ??
-              'You have already taken this exam. Retakes are not allowed.';
-          ref.invalidate(
-              studentAttemptProvider(int.parse(widget.assessmentId)));
-        } else if (e is DioException && e.response?.data != null) {
-          message = e.response?.data['message'] ?? message;
-        } else {
-          message = '$message: $e';
-        }
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -326,8 +265,55 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
+              if (_isCameraDenied)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    border: Border.all(color: Colors.red.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '📷 Camera Access Required',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Your browser has blocked camera access. You cannot start the exam without it.",
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text("Steps:", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text("1. Look at the top-left of your screen, near the address bar.\n2. Click the Lock Icon (🔒) or Tune Icon (tune).\n3. Find Camera and change the setting to Allow.\n4. Reload this page and try again."),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (kIsWeb) {
+                              html.window.location.reload();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Reload Page'),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Row(
+                  children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => context.pop(),
@@ -350,12 +336,76 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _agreed && !_isLoading ? _prepareExam : null,
+                      onPressed: (!_agreed || _isLoading) ? null : () async {
+                        try {
+                          setState(() => _isLoading = true);
+
+                          if (kIsWeb) {
+                            try {
+                              final devices = html.window.navigator.mediaDevices;
+                              if (devices != null) {
+                                await (devices as dynamic).getUserMedia({'video': true});
+                              }
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              setState(() {
+                                _isLoading = false;
+                                _isCameraDenied = true;
+                              });
+                              return;
+                            }
+                          }
+
+                          if (_attemptId != null && _roomName != null) {
+                            if (!context.mounted) return;
+                            context.pushReplacement(
+                              '/assessment/${widget.assessmentId}/take?attemptId=$_attemptId&roomName=$_roomName',
+                            );
+                            return;
+                          }
+
+                          final dio = ref.read(apiClientProvider);
+
+                          try {
+                            await dio.post('/assessments/${widget.assessmentId}/consent');
+                          } catch (e) {
+                            debugPrint('Consent check (possibly already recorded): $e');
+                          }
+
+                          final response = await dio.post(
+                            '/assessments/${widget.assessmentId}/start',
+                          );
+                          _attemptId = response.data['attempt_id'];
+
+                          ref.invalidate(assessmentDetailProvider(int.parse(widget.assessmentId)));
+                          ref.invalidate(retakeRequestStatusProvider(int.parse(widget.assessmentId)));
+
+                          final monitorResponse = await dio.post(
+                            '/start-exam/${widget.assessmentId}',
+                          );
+                          _roomName = monitorResponse.data['room_name'];
+
+                          if (!context.mounted) return;
+                          setState(() => _isLoading = false);
+                          context.pushReplacement(
+                            '/assessment/${widget.assessmentId}/take?attemptId=$_attemptId&roomName=$_roomName',
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          setState(() => _isLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Failed to start the exam. Connection error."),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6E4CF5),
                         foregroundColor: Colors.white,
                         disabledBackgroundColor:
-                            const Color(0xFF6E4CF5).withOpacity(0.5),
+                            const Color(0xFF6E4CF5).withValues(alpha: 0.5),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -374,7 +424,8 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
                           : const Text(
                               'Start Exam',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16),
+                                  fontWeight: FontWeight.bold, fontSize: 13),
+                              textAlign: TextAlign.center,
                             ),
                     ),
                   ),

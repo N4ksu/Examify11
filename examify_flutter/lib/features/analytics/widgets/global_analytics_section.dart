@@ -465,7 +465,7 @@ class _GlobalAnalyticsSectionState extends ConsumerState<GlobalAnalyticsSection>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: top.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   const Divider(height: 1, color: Color(0xFFF0F4F8)),
               itemBuilder: (context, i) {
                 final s = top[i];

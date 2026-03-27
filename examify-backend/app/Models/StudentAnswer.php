@@ -13,6 +13,11 @@ class StudentAnswer extends Model
         'text_response',
         'is_correct',
         'teacher_override',
+        'client_timestamp',
+    ];
+
+    protected $casts = [
+        'client_timestamp' => 'datetime',
     ];
 
     public function attempt()
