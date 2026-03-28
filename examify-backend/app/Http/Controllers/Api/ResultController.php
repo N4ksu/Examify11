@@ -153,6 +153,8 @@ class ResultController extends Controller
                     $query->orderBy('captured_at', 'desc');
                 }
             ])
+            ->orderBy('violation_count', 'desc')
+            ->orderBy('updated_at', 'desc')
             ->get()
             ->map(function ($attempt) {
                 return [

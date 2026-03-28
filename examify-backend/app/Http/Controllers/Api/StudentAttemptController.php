@@ -71,6 +71,11 @@ class StudentAttemptController extends Controller
         $request->validate([
             'image_url' => 'required|url',
             'captured_at' => 'required|date',
+            'is_violation' => 'nullable|boolean',
+            'event_type' => 'nullable|string',
+            'platform' => 'nullable|string',
+            'device_info' => 'nullable|string',
+            'remark' => 'nullable|string',
         ]);
 
         $imageUrl = $request->input('image_url');
@@ -81,6 +86,17 @@ class StudentAttemptController extends Controller
             'image_path' => $imageUrl,
             'captured_at' => $capturedAt,
         ]);
+
+        // If it's a violation, record it in the proctoring logs and increment count
+        if ($request->input('is_violation')) {
+            $this->assessmentService->handleProctoringEvent($attempt, [
+                'event_type' => $request->input('event_type', 'snapshot_violation'),
+                'platform' => $request->input('platform', 'Unknown'),
+                'device_info' => $request->input('device_info', 'Unknown Device'),
+                'timestamp' => $capturedAt->toIso8601String(),
+                'remark' => $request->input('remark'),
+            ], $request->ip());
+        }
 
         return response()->json(['message' => 'Snapshot saved successfully', 'snapshot' => $snapshot], 201);
     }

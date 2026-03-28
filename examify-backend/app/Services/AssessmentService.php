@@ -119,6 +119,17 @@ class AssessmentService
     {
         $this->saveAnswers($attempt, $answers);
 
+        // If attempt was already auto-submitted (e.g. due to violations), 
+        // preserve that status and the penalty score (usually 0).
+        if ($attempt->status === 'auto_submitted') {
+            return [
+                'score' => $attempt->score,
+                'max_score' => $attempt->assessment->questions()->sum('points'),
+                'total' => $attempt->assessment->questions()->count(),
+                'status' => 'auto_submitted'
+            ];
+        }
+
         $score = $this->gradeService->calculateScore($attempt);
         $maxScore = $attempt->assessment->questions()->sum('points');
         $totalQuestions = $attempt->assessment->questions()->count();
