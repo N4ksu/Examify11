@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import 'package:camera/camera.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io' show Platform;
 
 final syncProvider = NotifierProvider<SyncNotifier, SyncState>(() {
   return SyncNotifier();
@@ -61,20 +63,33 @@ class SyncNotifier extends Notifier<SyncState> {
   Future<void> captureSnapshot(
     int attemptId, {
     bool isViolation = false,
+    String? eventType,
     String? customCaption,
   }) async {
-    try {
-      if (_cameraController == null || !_cameraController!.value.isInitialized) {
-        return;
-      }
+    if (_cameraController == null || !_cameraController!.value.isInitialized)
+      return;
 
+    debugPrint(
+      "Capturing snapshot for attempt $attemptId (violation: $isViolation)",
+    );
+    try {
       final XFile file = await _cameraController!.takePicture();
+
+      // Secondary check after await: proctoring might have stopped mid-capture
+      if (_cameraController == null || !_cameraController!.value.isInitialized)
+        return;
       final bytes = await file.readAsBytes();
       final base64String = base64Encode(bytes);
 
       final caption =
           customCaption ?? (isViolation ? "⚠️ TAB SWITCH DETECTED" : null);
-      await saveSnapshotLocally(attemptId, base64String, caption: caption);
+      await saveSnapshotLocally(
+        attemptId,
+        base64String,
+        caption: caption,
+        isViolation: isViolation,
+        eventType: eventType,
+      );
     } catch (e) {
       debugPrint('Capture error: $e');
     }
@@ -115,6 +130,8 @@ class SyncNotifier extends Notifier<SyncState> {
     int attemptId,
     String base64Image, {
     String? caption,
+    bool isViolation = false,
+    String? eventType,
   }) async {
     final prefs = ref.read(sharedPreferencesProvider);
     final key = _getSnapshotKey(attemptId);
@@ -127,6 +144,8 @@ class SyncNotifier extends Notifier<SyncState> {
       'image': base64Image,
       'captured_at': timestamp,
       'caption': caption,
+      'is_violation': isViolation,
+      'event_type': eventType,
     });
 
     await prefs.setString(key, jsonEncode(pending));
@@ -205,7 +224,7 @@ class SyncNotifier extends Notifier<SyncState> {
     }
   }
 
-  static const String _discordWebhookUrl = 'bleee'; // Example placeholder
+  static const String _discordWebhookUrl = 'bleeeeeeeee'; // Example placeholder
 
   Future<void> _syncSnapshots(int attemptId) async {
     if (_isForcedOffline) return;
@@ -268,7 +287,15 @@ class SyncNotifier extends Notifier<SyncState> {
             // 2. Send URL to Laravel
             await api.post(
               '/attempts/$attemptId/proctor-snapshots',
-              data: {'image_url': discordUrl, 'captured_at': capturedAt},
+              data: {
+                'image_url': discordUrl,
+                'captured_at': capturedAt,
+                'is_violation': snap['is_violation'] ?? false,
+                'event_type': snap['event_type'],
+                'remark': snap['caption'],
+                'platform': _getPlatformName(),
+                'device_info': await _getDeviceInfo(),
+              },
             );
 
             remaining.remove(snap);
@@ -297,6 +324,46 @@ class SyncNotifier extends Notifier<SyncState> {
 
   void markSessionLocked() {
     state = state.copyWith(isSessionLocked: true);
+  }
+
+  Future<String> _getDeviceInfo() async {
+    if (kIsWeb) return 'Web Browser';
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final info = await deviceInfo.androidInfo;
+        return '${info.manufacturer} ${info.model} (API ${info.version.sdkInt})';
+      } else if (Platform.isIOS) {
+        final info = await deviceInfo.iosInfo;
+        return '${info.name} ${info.systemVersion}';
+      } else if (Platform.isWindows) {
+        final info = await deviceInfo.windowsInfo;
+        return 'Windows ${info.majorVersion}.${info.minorVersion}';
+      } else if (Platform.isMacOS) {
+        final info = await deviceInfo.macOsInfo;
+        return 'macOS ${info.osRelease}';
+      } else if (Platform.isLinux) {
+        final info = await deviceInfo.linuxInfo;
+        return '${info.name} ${info.version}';
+      }
+    } catch (e) {
+      debugPrint('Error getting device info: $e');
+    }
+    return 'Unknown Device';
+  }
+
+  String _getPlatformName() {
+    if (kIsWeb) return 'Web';
+    try {
+      if (Platform.isAndroid) return 'Android';
+      if (Platform.isIOS) return 'iOS';
+      if (Platform.isWindows) return 'Windows';
+      if (Platform.isMacOS) return 'macOS';
+      if (Platform.isLinux) return 'Linux';
+    } catch (e) {
+      debugPrint('Error getting platform name: $e');
+    }
+    return 'Unknown';
   }
 
   void markOnline() {

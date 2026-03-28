@@ -22,9 +22,9 @@ const _kBgPage       = Color(0xFFF4F7FF);
 enum _Status { normal, suspicious, cheating }
 
 _Status _statusFor(int n) {
-  if (n >= 5) return _Status.cheating;
-  if (n >= 3) return _Status.suspicious;
-  return _Status.normal;
+  if (n >= 3) return _Status.cheating;   // Strike 3 and above
+  if (n >= 1) return _Status.suspicious; // Strike 1 and 2
+  return _Status.normal;                 // No violations
 }
 
 Color _statusColor(_Status s) {

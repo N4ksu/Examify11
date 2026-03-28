@@ -48,7 +48,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
   int _secondsRemaining = 0;
   bool _isInitialized = false;
   bool _isQuestionsInitialized = false;
-
+  bool _isSubmitting = false;
 
   // Camera tracking
   CameraController? _cameraController;
@@ -80,6 +80,14 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
         });
 
         if (_violationStrikes == 1) {
+          if (_cameraController != null && _cameraController!.value.isInitialized) {
+            ref.read(syncProvider.notifier).captureSnapshot(
+                  widget.attemptId, 
+                  isViolation: true, 
+                  eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
+                  customCaption: "⚠️ **STRIKE 1: WARNING**",
+                );
+          }
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -100,6 +108,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
             ref.read(syncProvider.notifier).captureSnapshot(
                   widget.attemptId, 
                   isViolation: true, 
+                  eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
                   customCaption: "🚨 **STRIKE 2: TAB SWITCH DETECTED**",
                 );
           }
@@ -123,6 +132,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
             ref.read(syncProvider.notifier).captureSnapshot(
                   widget.attemptId, 
                   isViolation: true, 
+                  eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
                   customCaption: "⛔ **STRIKE 3: EXAM TERMINATED**",
                 );
           }
@@ -420,6 +430,13 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
 
   void _submit({bool autoSubmit = false, List<Question>? questions}) async {
     _timer?.cancel();
+    _focusTimer?.cancel();
+    
+    // Stop proctoring capture immediately
+    ref.read(syncProvider.notifier).stopCapture();
+    
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
 
     if (questions != null) {
       final answers = <Map<String, dynamic>>[];
@@ -449,6 +466,8 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
 
       try {
         final api = ref.read(apiClientProvider);
+        
+        // 1. Submit all current answers
         await api.post(
           '/attempts/${widget.attemptId}/submit',
           data: {'answers': answers},
@@ -469,6 +488,8 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to submit assessment: $e')),
         );
+      } finally {
+        if (mounted) setState(() => _isSubmitting = false);
       }
     } else {
       _invalidateData();
