@@ -1,36 +1,56 @@
-name: Build
+name: SonarQube CI
+
 on:
   push:
     branches:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
   sonarqube:
-    name: SonarQube
+    name: SonarQube Analysis
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # ✅ Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ✅ Install Flutter
+      # ✅ Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # or latest stable
+          flutter-version: '3.19.0'
 
-      # ✅ Verify Flutter (optional but helpful)
-      - name: Check Flutter
+      # ✅ Verify Flutter
+      - name: Check Flutter Version
         run: flutter --version
 
-      # ✅ Install dependencies
-      - name: Build
-        run: |
-          flutter pub get
+      # ✅ Install Flutter dependencies (FIXED DIRECTORY)
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+        working-directory: examify_flutter
 
-      # ✅ SonarQube Scan
+      # ✅ Analyze Flutter (good for quality + portfolio)
+      - name: Analyze Flutter Code
+        run: flutter analyze
+        working-directory: examify_flutter
+
+      # ✅ Setup PHP for Laravel
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      # ✅ Install Laravel dependencies
+      - name: Install Laravel Dependencies
+        run: composer install
+        working-directory: examify-backend
+
+      # ✅ SonarQube Scan (runs at ROOT)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
