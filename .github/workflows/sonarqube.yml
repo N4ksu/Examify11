@@ -9,13 +9,28 @@ jobs:
   sonarqube:
     name: SonarQube
     runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      # The analysis requires to retrieve dependencies and build successfully
+          fetch-depth: 0
+
+      # ✅ Install Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # or latest stable
+
+      # ✅ Verify Flutter (optional but helpful)
+      - name: Check Flutter
+        run: flutter --version
+
+      # ✅ Install dependencies
       - name: Build
-        run: flutter pub get
+        run: |
+          flutter pub get
+
+      # ✅ SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
