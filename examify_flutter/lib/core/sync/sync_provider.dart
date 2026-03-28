@@ -64,8 +64,9 @@ class SyncNotifier extends Notifier<SyncState> {
     String? customCaption,
   }) async {
     try {
-      if (_cameraController == null || !_cameraController!.value.isInitialized)
+      if (_cameraController == null || !_cameraController!.value.isInitialized) {
         return;
+      }
 
       final XFile file = await _cameraController!.takePicture();
       final bytes = await file.readAsBytes();
