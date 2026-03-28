@@ -13,44 +13,43 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # ✅ Checkout code
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ✅ Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      # ✅ Verify Flutter
       - name: Check Flutter Version
-        run: flutter --version
+        run: |
+          flutter --version
+          dart --version
 
-      # ✅ Install Flutter dependencies (FIXED DIRECTORY)
       - name: Install Flutter Dependencies
         run: flutter pub get
         working-directory: examify_flutter
 
-      # ✅ Analyze Flutter (good for quality + portfolio)
       - name: Analyze Flutter Code
         run: flutter analyze
         working-directory: examify_flutter
 
-      # ✅ Setup PHP for Laravel
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
+          extensions: fileinfo
+          tools: composer
 
-      # ✅ Install Laravel dependencies
+      - name: Check PHP Version
+        run: php -v
+
       - name: Install Laravel Dependencies
-        run: composer install
+        run: composer install --no-interaction --prefer-dist
         working-directory: examify-backend
 
-      # ✅ SonarQube Scan (runs at ROOT)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
