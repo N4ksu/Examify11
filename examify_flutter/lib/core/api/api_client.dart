@@ -11,9 +11,14 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   );
 });
 
+// const String apiBaseUrl = String.fromEnvironment(
+//   'API_URL',
+//   defaultValue: 'https://examify11.onrender.com/api',
+// );
+
 const String apiBaseUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'https://examify11.onrender.com/api',
+  defaultValue: 'http://localhost:8000/api/',
 );
 
 final apiClientProvider = Provider<Dio>((ref) {

@@ -17,7 +17,7 @@ class StreamTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final isTeacher = user?.role.name == 'teacher';
 
     final classroomAsync = ref.watch(classroomDetailProvider(classroomId));

@@ -59,7 +59,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final classroomAsync = ref.watch(classroomDetailProvider(widget.id));
     final assessmentsAsync = ref.watch(
       assessmentsProvider(int.parse(widget.id)),
@@ -135,7 +135,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                                   ),
                                   clipBehavior: Clip.hardEdge,
                                   child: Image.asset(
-                                    'assets/cite_logo.png',
+                                    'assets/cite_logo.webp',
                                     fit: BoxFit.contain,
                                   ),
                                 ),
@@ -295,9 +295,9 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                     child: Icon(Icons.menu, color: Colors.white, size: 24),
                   ),
                 ),
-                Image.asset('assets/cite_logo.png', height: 44),
+                Image.asset('assets/cite_logo.webp', height: 44),
                 const SizedBox(width: 8),
-                Image.asset('assets/jmc_logo.png', height: 40),
+                Image.asset('assets/jmc_logo.webp', height: 40),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -344,7 +344,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (ref.watch(authProvider).user?.role.name == 'student')
+                if (ref.watch(authProvider.select((state) => state.user))?.role.name == 'student')
                   IconButton(
                     icon: const Icon(Icons.refresh, color: Colors.white),
                     tooltip: 'Refresh Status',

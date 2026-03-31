@@ -181,11 +181,29 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class ExamifyApp extends ConsumerWidget {
+class ExamifyApp extends ConsumerStatefulWidget {
   const ExamifyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExamifyApp> createState() => _ExamifyAppState();
+}
+
+class _ExamifyAppState extends ConsumerState<ExamifyApp> {
+  bool _assetsCached = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_assetsCached) {
+      precacheImage(const AssetImage('assets/login_bg.webp'), context);
+      precacheImage(const AssetImage('assets/cite_logo.webp'), context);
+      precacheImage(const AssetImage('assets/jmc_logo.webp'), context);
+      _assetsCached = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

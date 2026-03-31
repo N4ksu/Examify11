@@ -23,7 +23,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   @override
   Widget build(BuildContext context) {
     final classroomsAsync = ref.watch(classroomsProvider);
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
 
     return Scaffold(
       backgroundColor: const Color(0xFFEFF5FB),
@@ -172,9 +172,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                Image.asset('assets/cite_logo.png', height: 44),
+                Image.asset('assets/cite_logo.webp', height: 44),
                 const SizedBox(width: 10),
-                Image.asset('assets/jmc_logo.png', height: 40),
+                Image.asset('assets/jmc_logo.webp', height: 40),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -526,7 +526,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                 ),
               ),
               child: Center(
-                child: Image.asset('assets/cite_logo.png', height: 68),
+                child: Image.asset('assets/cite_logo.webp', height: 68),
               ),
             ),
             Padding(

@@ -11,7 +11,7 @@ class PeopleTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final studentsAsync = ref.watch(classroomStudentsProvider(classroomId));
     final classroomAsync = ref.watch(classroomDetailProvider(classroomId));
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final isTeacher = user?.role.name == 'teacher';
 
     return Scaffold(
@@ -25,31 +25,38 @@ class PeopleTab extends ConsumerWidget {
               await ref.read(classroomStudentsProvider(classroomId).future);
               await ref.read(classroomDetailProvider(classroomId).future);
             },
-            child: ListView(
+            child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              children: [
-                _buildSectionHeader(
-                  context,
-                  'Teachers',
-                  Icons.person_add_alt_1,
-                  showIcon: isTeacher,
-                ),
-                _buildPersonRow(
-                  context,
-                  classroom.teacher?.name ?? 'Teacher',
-                  isTeacher: true,
-                ),
-                const SizedBox(height: 32),
-                _buildSectionHeader(
-                  context,
-                  'Students',
-                  Icons.person_add_alt_1,
-                  count: students.length,
-                  showIcon: isTeacher,
-                ),
-                ...students.map((s) => _buildPersonRow(context, s.name)),
-              ],
+              itemCount: 4 + students.length,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _buildSectionHeader(
+                    context,
+                    'Teachers',
+                    Icons.person_add_alt_1,
+                    showIcon: isTeacher,
+                  );
+                }
+                if (index == 1) {
+                  return _buildPersonRow(
+                    context,
+                    classroom.teacher?.name ?? 'Teacher',
+                    isTeacher: true,
+                  );
+                }
+                if (index == 2) return const SizedBox(height: 32);
+                if (index == 3) {
+                  return _buildSectionHeader(
+                    context,
+                    'Students',
+                    Icons.person_add_alt_1,
+                    count: students.length,
+                    showIcon: isTeacher,
+                  );
+                }
+                return _buildPersonRow(context, students[index - 4].name);
+              },
             ),
           ),
           loading: () => const Center(child: CircularProgressIndicator()),

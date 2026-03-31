@@ -232,7 +232,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset('assets/login_bg.png', fit: BoxFit.cover),
+            child: Image.asset('assets/login_bg.webp', fit: BoxFit.cover),
           ),
           Positioned.fill(
             child: BackdropFilter(
@@ -246,7 +246,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.asset('assets/jmc_logo.png', height: 48),
+                Image.asset('assets/jmc_logo.webp', height: 48),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,7 +327,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset('assets/cite_logo.png', height: 95),
+                          Image.asset('assets/cite_logo.webp', height: 95),
                           const SizedBox(height: 6),
                           const Text(
                             'Create Account',

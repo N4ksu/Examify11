@@ -20,7 +20,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
   @override
   Widget build(BuildContext context) {
     final classroomsAsync = ref.watch(classroomsProvider);
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     return Scaffold(
       backgroundColor: const Color(0xFFEFF5FB),
       body: Stack(
@@ -162,9 +162,9 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                Image.asset('assets/cite_logo.png', height: 44),
+                Image.asset('assets/cite_logo.webp', height: 44),
                 const SizedBox(width: 10),
-                Image.asset('assets/jmc_logo.png', height: 40),
+                Image.asset('assets/jmc_logo.webp', height: 40),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -477,7 +477,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                 ),
               ),
               child: Center(
-                child: Image.asset('assets/cite_logo.png', height: 78),
+                child: Image.asset('assets/cite_logo.webp', height: 78),
               ),
             ),
             Padding(

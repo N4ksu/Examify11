@@ -44,9 +44,6 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
       {}; // Map of question index -> essay text value
   final _essayController = TextEditingController();
 
-  Timer? _timer;
-  int _secondsRemaining = 0;
-  bool _isInitialized = false;
   bool _isQuestionsInitialized = false;
   bool _isSubmitting = false;
 
@@ -167,21 +164,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
     await [Permission.camera].request();
   }
 
-  void _initTimer(int minutes) {
-    if (_isInitialized) return;
-    _secondsRemaining = minutes * 60;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining > 0) {
-        setState(() {
-          _secondsRemaining--;
-        });
-      } else {
-        _timer?.cancel();
-        _submit(autoSubmit: true, questions: _loadedQuestions);
-      }
-    });
-    _isInitialized = true;
-  }
+
 
   Future<void> _initCamera() async {
     try {
@@ -215,7 +198,6 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
   void dispose() {
     _focusTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    _timer?.cancel();
     ref.read(syncProvider.notifier).stopCapture();
     _cameraController?.dispose();
     
@@ -429,7 +411,6 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
   }
 
   void _submit({bool autoSubmit = false, List<Question>? questions}) async {
-    _timer?.cancel();
     _focusTimer?.cancel();
     
     // Stop proctoring capture immediately
@@ -503,8 +484,8 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
 
   @override
   Widget build(BuildContext context) {
-    final syncState = ref.watch(syncProvider);
-    if (syncState.isSessionLocked) {
+    final isSessionLocked = ref.watch(syncProvider.select((state) => state.isSessionLocked));
+    if (isSessionLocked) {
        return SessionLockedOverlay(attemptId: widget.attemptId);
     }
     
@@ -516,7 +497,6 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
       canPop: false,
       child: assessmentAsync.when(
         data: (assessment) {
-          _initTimer(assessment.timeLimitMinutes);
           _loadedQuestions = assessment.questions;
           if (!_isQuestionsInitialized && assessment.questions.isNotEmpty) {
             final questions = assessment.questions;
@@ -542,11 +522,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
     );
   }
 
-  String _formatTime(int totalSeconds) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
+
 
   Widget _buildMainLayout(BuildContext context, Assessment assessment) {
     return LayoutBuilder(
@@ -586,7 +562,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
 
   Widget _buildExamUI(BuildContext context, Assessment assessment) {
     final questions = assessment.questions;
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     
     if (questions.isEmpty) {
       return Scaffold(
@@ -620,9 +596,9 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Image.asset('assets/cite_logo.png', height: 40),
+                  Image.asset('assets/cite_logo.webp', height: 40),
                   const SizedBox(width: 8),
-                  Image.asset('assets/jmc_logo.png', height: 36),
+                  Image.asset('assets/jmc_logo.webp', height: 36),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -665,7 +641,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                       SizedBox(
                         height: 24,
                         child: Switch(
-                          value: !ref.watch(syncProvider).isOnline,
+                          value: !ref.watch(syncProvider.select((state) => state.isOnline)),
                           activeThumbColor: Colors.orange,
                           onChanged: (val) {
                             ref.read(syncProvider.notifier).toggleForcedOffline(val);
@@ -688,26 +664,11 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.timer_outlined,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatTime(_secondsRemaining),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: _secondsRemaining < 60
-                                ? Colors.red.withValues(alpha: 0.8)
-                                : Colors.white,
-                          ),
-                        ),
-                      ],
+                    child: ExamTimer(
+                      initialMinutes: assessment.timeLimitMinutes,
+                      onTimeUp: () {
+                        _submit(autoSubmit: true, questions: _loadedQuestions);
+                      },
                     ),
                   ),
                 ],
@@ -950,6 +911,84 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
         ],
       ),
      ),
+    );
+  }
+}
+
+class ExamTimer extends StatefulWidget {
+  final int initialMinutes;
+  final VoidCallback onTimeUp;
+
+  const ExamTimer({
+    super.key,
+    required this.initialMinutes,
+    required this.onTimeUp,
+  });
+
+  @override
+  State<ExamTimer> createState() => _ExamTimerState();
+}
+
+class _ExamTimerState extends State<ExamTimer> {
+  late int _secondsRemaining;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _secondsRemaining = widget.initialMinutes * 60;
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        if (mounted) {
+          setState(() {
+            _secondsRemaining--;
+          });
+        }
+      } else {
+        _timer?.cancel();
+        widget.onTimeUp();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _formatTime(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.timer_outlined,
+          size: 18,
+          color: Colors.white,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          _formatTime(_secondsRemaining),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: _secondsRemaining < 60
+                ? Colors.red.withValues(alpha: 0.8)
+                : Colors.white,
+          ),
+        ),
+      ],
     );
   }
 }

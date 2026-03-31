@@ -17,7 +17,7 @@ class AssessmentsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((state) => state.user));
     final isTeacher = user?.role.name == 'teacher';
     final assessmentsAsync = ref.watch(
       assessmentsProvider(int.parse(classroomId)),
@@ -53,33 +53,32 @@ class AssessmentsTab extends ConsumerWidget {
               .where((a) => a.type == 'activity')
               .toList();
 
+          final List<Widget> listItems = [];
+
+          if (exams.isNotEmpty) {
+            listItems.add(_buildAssignmentSection(context, 'Assessments'));
+            listItems.addAll(exams.map((a) => _buildAssessmentItem(context, ref, a, isTeacher)));
+            listItems.add(const SizedBox(height: 32));
+          }
+
+          if (quizzes.isNotEmpty) {
+            listItems.add(_buildAssignmentSection(context, 'Quizzes'));
+            listItems.addAll(quizzes.map((a) => _buildAssessmentItem(context, ref, a, isTeacher)));
+            listItems.add(const SizedBox(height: 32));
+          }
+
+          if (activities.isNotEmpty) {
+            listItems.add(_buildAssignmentSection(context, 'Activities'));
+            listItems.addAll(activities.map((a) => _buildAssessmentItem(context, ref, a, isTeacher)));
+          }
+
           return RefreshIndicator(
             onRefresh: () =>
                 ref.refresh(assessmentsProvider(int.parse(classroomId)).future),
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(24),
-              children: [
-                if (exams.isNotEmpty) ...[
-                  _buildAssignmentSection(context, 'Assessments'),
-                  ...exams.map(
-                    (a) => _buildAssessmentItem(context, ref, a, isTeacher),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-                if (quizzes.isNotEmpty) ...[
-                  _buildAssignmentSection(context, 'Quizzes'),
-                  ...quizzes.map(
-                    (a) => _buildAssessmentItem(context, ref, a, isTeacher),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-                if (activities.isNotEmpty) ...[
-                  _buildAssignmentSection(context, 'Activities'),
-                  ...activities.map(
-                    (a) => _buildAssessmentItem(context, ref, a, isTeacher),
-                  ),
-                ],
-              ],
+              itemCount: listItems.length,
+              itemBuilder: (context, index) => listItems[index],
             ),
           );
         },
