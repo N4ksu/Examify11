@@ -11,12 +11,17 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   );
 });
 
+const String apiBaseUrl = String.fromEnvironment(
+  'API_URL',
+  defaultValue: 'https://examify11.onrender.com/api',
+);
+
 final apiClientProvider = Provider<Dio>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: 'http://127.0.0.1:8000/api', // Dev base URL
+      baseUrl: apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 90),
       headers: {
