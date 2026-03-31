@@ -55,7 +55,7 @@ class User extends Authenticatable
 
     public function enrolledClassrooms()
     {
-        return $this->belongsToMany(Classroom::class, 'classroom_students', 'student_id', 'classroom_id');
+        return $this->belongsToMany(Classroom::class, 'classroom_students', 'student_id', 'classroom_id', 'id', 'id');
     }
 
     public function attempts()

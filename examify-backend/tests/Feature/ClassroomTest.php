@@ -37,7 +37,7 @@ class ClassroomTest extends TestCase
         ]);
 
         $response = $this->actingAs($student)
-            ->postJson("/api/classrooms/{$classroom->id}/join", [
+            ->postJson("/api/join", [
                 'join_code' => 'joinme' // Case insensitive test
             ]);
 
@@ -56,5 +56,30 @@ class ClassroomTest extends TestCase
         $response = $this->actingAs($teacher)->getJson('/api/classrooms');
 
         $response->assertStatus(200)->assertJsonCount(3);
+    }
+
+    public function test_student_can_list_their_joined_classrooms()
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        // Give the student a school student_id that is NOT their database id
+        $student = User::factory()->create([
+            'role' => 'student',
+            'student_id' => 'STUDENT-123'
+        ]);
+        
+        $classroom1 = Classroom::factory()->create(['teacher_id' => $teacher->id]);
+        $classroom2 = Classroom::factory()->create(['teacher_id' => $teacher->id]);
+        $classroom3 = Classroom::factory()->create(['teacher_id' => $teacher->id]);
+
+        $classroom1->students()->attach($student->id);
+        $classroom2->students()->attach($student->id);
+
+        $response = $this->actingAs($student)->getJson('/api/classrooms');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2)
+            ->assertJsonFragment(['id' => $classroom1->id])
+            ->assertJsonFragment(['id' => $classroom2->id])
+            ->assertJsonMissing(['id' => $classroom3->id]);
     }
 }

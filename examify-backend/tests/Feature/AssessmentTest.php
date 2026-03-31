@@ -74,4 +74,31 @@ class AssessmentTest extends TestCase
             'status' => 'in_progress'
         ]);
     }
+
+    public function test_student_only_sees_published_assessments()
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $classroom = Classroom::factory()->create();
+        $classroom->students()->attach($student->id);
+
+        Assessment::factory()->create([
+            'classroom_id' => $classroom->id,
+            'title' => 'Published Exam',
+            'is_published' => true,
+        ]);
+
+        Assessment::factory()->create([
+            'classroom_id' => $classroom->id,
+            'title' => 'Unpublished Exam',
+            'is_published' => false,
+        ]);
+
+        $response = $this->actingAs($student)
+            ->getJson("/api/classrooms/{$classroom->id}/assessments");
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['title' => 'Published Exam'])
+            ->assertJsonMissing(['title' => 'Unpublished Exam']);
+    }
 }

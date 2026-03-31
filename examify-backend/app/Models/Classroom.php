@@ -23,7 +23,7 @@ class Classroom extends Model
 
     public function students()
     {
-        return $this->belongsToMany(User::class, 'classroom_students', 'classroom_id', 'student_id');
+        return $this->belongsToMany(User::class, 'classroom_students', 'classroom_id', 'student_id', 'id', 'id');
     }
 
     public function assessments()

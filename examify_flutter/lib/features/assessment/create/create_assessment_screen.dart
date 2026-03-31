@@ -33,6 +33,7 @@ class _CreateAssessmentScreenState
   bool _showScore = true;
   bool _isEditing = false;
   String? _draftId;
+  bool _isPublished = false;
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _CreateAssessmentScreenState
         _timeLimitController.text = assessment.timeLimitMinutes.toString();
         _selectedOverallCourseOutcome = assessment.courseOutcomeId;
         _showScore = assessment.showScore;
+        _isPublished = assessment.isPublished;
         if (mounted) setState(() {});
       } catch (e) {
         _showError('Failed to load assessment: $e');
@@ -84,7 +86,7 @@ class _CreateAssessmentScreenState
         'description': _descriptionController.text,
         'type': 'exam',
         'time_limit_minutes': int.tryParse(_timeLimitController.text) ?? 60,
-        'is_published': false,
+        'is_published': _isEditing ? _isPublished : false,
         'course_outcome_id': _selectedOverallCourseOutcome,
         'show_score': _showScore,
       };

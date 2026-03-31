@@ -33,7 +33,7 @@ class AssessmentController extends Controller
         if ($user->role === 'student') {
             if (!$classroom->students()->where('users.id', $user->id)->exists())
                 abort(403);
-            $query->where('is_published', true)
+            $query = $query->where('is_published', true)
                 ->with(['attempts' => function ($q) use ($user) {
                 $q->where('student_id', $user->id)->latest();
             }]);

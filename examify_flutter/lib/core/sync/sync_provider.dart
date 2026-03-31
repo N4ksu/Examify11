@@ -66,8 +66,9 @@ class SyncNotifier extends Notifier<SyncState> {
     String? eventType,
     String? customCaption,
   }) async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized)
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return;
+    }
 
     debugPrint(
       "Capturing snapshot for attempt $attemptId (violation: $isViolation)",
@@ -76,8 +77,9 @@ class SyncNotifier extends Notifier<SyncState> {
       final XFile file = await _cameraController!.takePicture();
 
       // Secondary check after await: proctoring might have stopped mid-capture
-      if (_cameraController == null || !_cameraController!.value.isInitialized)
+      if (_cameraController == null || !_cameraController!.value.isInitialized) {
         return;
+      }
       final bytes = await file.readAsBytes();
       final base64String = base64Encode(bytes);
 

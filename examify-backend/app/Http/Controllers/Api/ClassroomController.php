@@ -17,7 +17,10 @@ class ClassroomController extends Controller
         if ($user->role === 'teacher') {
             $classrooms = $request->user()->classrooms()->withCount('students')->get();
         } else {
-            $classrooms = $request->user()->enrolledClassrooms()->with('teacher:id,name,email')->get();
+            $classrooms = $request->user()->enrolledClassrooms()
+                ->with(['teacher:id,name,email,role'])
+                ->withCount('students')
+                ->get();
         }
 
         return response()->json($classrooms, 200);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'dart:async';
@@ -18,7 +19,11 @@ final classroomsProvider = FutureProvider<List<Classroom>>((ref) async {
 
   final response = await ref.read(apiClientProvider).get('/classrooms');
   final List<dynamic> data = response.data;
-  return data.map((json) => Classroom.fromJson(json)).toList();
+  final classrooms = data.map((json) => Classroom.fromJson(json)).toList();
+  debugPrint(
+    'Fetched ${classrooms.length} classrooms for user: ${authState.user?.name}',
+  );
+  return classrooms;
 });
 
 // Single Classroom Detail
