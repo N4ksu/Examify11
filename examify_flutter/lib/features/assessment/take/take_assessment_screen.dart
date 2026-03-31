@@ -36,7 +36,7 @@ class TakeAssessmentScreen extends ConsumerStatefulWidget {
 }
 
 class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> with WidgetsBindingObserver {
-  int _violationCount = 0;
+  final ValueNotifier<int> _violationNotifier = ValueNotifier<int>(0);
   int _currentQuestionIndex = 0;
   final Map<int, Set<int>> _selectedAnswers =
       {}; // Map of question index -> set of selected option indices
@@ -48,9 +48,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
   bool _isSubmitting = false;
 
   // Camera tracking
-  CameraController? _cameraController;
   Timer? _focusTimer;
-  int _violationStrikes = 0;
 
   List<Question>? _loadedQuestions;
 
@@ -61,7 +59,6 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
     if (widget.roomName != null) {
       _requestPermissions();
     }
-    _initCamera();
   }
 
   @override
@@ -71,20 +68,16 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
       
       _focusTimer = Timer(const Duration(seconds: 3), () {
         if (!mounted) return;
-        setState(() {
-          _violationStrikes++;
-          _violationCount = _violationStrikes;
-        });
+        
+        _violationNotifier.value++;
 
-        if (_violationStrikes == 1) {
-          if (_cameraController != null && _cameraController!.value.isInitialized) {
-            ref.read(syncProvider.notifier).captureSnapshot(
-                  widget.attemptId, 
-                  isViolation: true, 
-                  eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
-                  customCaption: "⚠️ **STRIKE 1: WARNING**",
-                );
-          }
+        if (_violationNotifier.value == 1) {
+          ref.read(syncProvider.notifier).captureSnapshot(
+                widget.attemptId, 
+                isViolation: true, 
+                eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
+                customCaption: "⚠️ **STRIKE 1: WARNING**",
+              );
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -100,15 +93,13 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
             ),
           );
           return;
-        } else if (_violationStrikes == 2) {
-          if (_cameraController != null && _cameraController!.value.isInitialized) {
-            ref.read(syncProvider.notifier).captureSnapshot(
-                  widget.attemptId, 
-                  isViolation: true, 
-                  eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
-                  customCaption: "🚨 **STRIKE 2: TAB SWITCH DETECTED**",
-                );
-          }
+        } else if (_violationNotifier.value == 2) {
+          ref.read(syncProvider.notifier).captureSnapshot(
+                widget.attemptId, 
+                isViolation: true, 
+                eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
+                customCaption: "🚨 **STRIKE 2: TAB SWITCH DETECTED**",
+              );
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -124,15 +115,13 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
             ),
           );
           return;
-        } else if (_violationStrikes >= 3) {
-          if (_cameraController != null && _cameraController!.value.isInitialized) {
-            ref.read(syncProvider.notifier).captureSnapshot(
-                  widget.attemptId, 
-                  isViolation: true, 
-                  eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
-                  customCaption: "⛔ **STRIKE 3: EXAM TERMINATED**",
-                );
-          }
+        } else if (_violationNotifier.value >= 3) {
+          ref.read(syncProvider.notifier).captureSnapshot(
+                widget.attemptId, 
+                isViolation: true, 
+                eventType: state == AppLifecycleState.paused ? 'app_background' : 'window_blur',
+                customCaption: "⛔ **STRIKE 3: EXAM TERMINATED**",
+              );
           // Force auto-submit immediately
           _submit(autoSubmit: true, questions: _loadedQuestions);
           showDialog(
@@ -165,41 +154,11 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
   }
 
 
-
-  Future<void> _initCamera() async {
-    try {
-      // 1. Initialize Webcam (for the PiP display)
-      final cameras = await availableCameras();
-      if (cameras.isNotEmpty) {
-        final frontCamera = cameras.firstWhere(
-          (c) => c.lensDirection == CameraLensDirection.front,
-          orElse: () => cameras.first,
-        );
-
-        _cameraController = CameraController(
-          frontCamera,
-          ResolutionPreset.low,
-          enableAudio: false,
-        );
-
-        await _cameraController!.initialize();
-        if (mounted) setState(() {});
-      }
-
-      // 2. Delegate proctoring capture to SyncProvider
-      ref.read(syncProvider.notifier).startCapture(_cameraController, widget.attemptId);
-    } catch (e) {
-      debugPrint('Camera/Screen init error: $e');
-    }
-  }
-
-
   @override
   void dispose() {
     _focusTimer?.cancel();
+    _violationNotifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
-    ref.read(syncProvider.notifier).stopCapture();
-    _cameraController?.dispose();
     
     if (!kIsWeb) {
       // Ensure local window manager flags are reset even if service fails
@@ -530,33 +489,10 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
         return Stack(
           children: [
             _buildExamUI(context, assessment),
-            _buildCameraPiP(),
+            ProctoringCameraPreview(attemptId: widget.attemptId),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildCameraPiP() {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return const SizedBox.shrink();
-    }
-    return Positioned(
-      right: 16,
-      bottom: 16,
-      child: Container(
-        width: 120,
-        height: 160,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: CameraPreview(_cameraController!),
-      ),
     );
   }
 
@@ -682,11 +618,16 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
           Expanded(
             child: Column(
               children: [
-                if (_violationCount > 0)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ViolationBanner(violationCount: _violationCount),
-                  ),
+                ValueListenableBuilder<int>(
+                  valueListenable: _violationNotifier,
+                  builder: (context, strikes, child) {
+                    if (strikes == 0) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ViolationBanner(violationCount: strikes),
+                    );
+                  },
+                ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
@@ -911,6 +852,82 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
         ],
       ),
      ),
+    );
+  }
+}
+
+class ProctoringCameraPreview extends ConsumerStatefulWidget {
+  final int attemptId;
+
+  const ProctoringCameraPreview({super.key, required this.attemptId});
+
+  @override
+  ConsumerState<ProctoringCameraPreview> createState() => _ProctoringCameraPreviewState();
+}
+
+class _ProctoringCameraPreviewState extends ConsumerState<ProctoringCameraPreview> {
+  CameraController? _cameraController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        final frontCamera = cameras.firstWhere(
+          (c) => c.lensDirection == CameraLensDirection.front,
+          orElse: () => cameras.first,
+        );
+
+        _cameraController = CameraController(
+          frontCamera,
+          ResolutionPreset.low,
+          enableAudio: false,
+        );
+
+        await _cameraController!.initialize();
+        if (mounted) setState(() {});
+      }
+
+      ref.read(syncProvider.notifier).startCapture(_cameraController, widget.attemptId);
+    } catch (e) {
+      debugPrint('Camera/Screen init error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    ref.read(syncProvider.notifier).stopCapture();
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      right: 16,
+      bottom: 16,
+      child: Container(
+        width: 120,
+        height: 160,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [
+            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: CameraPreview(_cameraController!),
+      ),
     );
   }
 }
