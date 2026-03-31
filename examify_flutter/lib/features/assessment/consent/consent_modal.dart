@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 import '../../../core/api/api_client.dart';
 import '../../../shared/models/assessment.dart';
 import '../../../shared/providers/assessment_provider.dart';
@@ -298,7 +298,7 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (kIsWeb) {
-                              html.window.location.reload();
+                              web.window.location.reload();
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -342,10 +342,9 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
 
                           if (kIsWeb) {
                             try {
-                              final devices = html.window.navigator.mediaDevices;
-                              if (devices != null) {
-                                await (devices as dynamic).getUserMedia({'video': true});
-                              }
+                              final devices = web.window.navigator.mediaDevices;
+                              final options = {'video': true}.jsify() as web.MediaStreamConstraints;
+                              await devices.getUserMedia(options).toDart;
                             } catch (e) {
                               if (!context.mounted) return;
                               setState(() {

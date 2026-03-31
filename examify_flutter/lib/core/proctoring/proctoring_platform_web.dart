@@ -1,40 +1,40 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 import 'proctoring_platform.dart';
 
 class WebProctoring extends ProctoringPlatform {
   @override
   void lockWeb(Function(String) onViolation) {
-    html.document.documentElement?.requestFullscreen();
+    web.document.documentElement?.requestFullscreen();
     
     // Tab switching detection
-    html.document.onVisibilityChange.listen((event) {
-      if (html.document.visibilityState == 'hidden') {
+    web.document.addEventListener('visibilitychange', ((web.Event event) {
+      if (web.document.visibilityState == 'hidden') {
         onViolation('alt_tab');
       }
-    });
+    }).toJS);
 
     // Window resize (Split-screen) detection
-    html.window.onResize.listen((event) {
+    web.window.addEventListener('resize', ((web.Event event) {
       onViolation('window_resize');
-    });
+    }).toJS);
 
     // Fullscreen exit detection
-    html.document.onFullscreenChange.listen((event) {
-      if (html.document.fullscreenElement == null) {
+    web.document.addEventListener('fullscreenchange', ((web.Event event) {
+      if (web.document.fullscreenElement == null) {
         onViolation('fullscreen_exit');
       }
-    });
+    }).toJS);
   }
 
   @override
   void unlockWeb() {
-    html.document.exitFullscreen();
+    web.document.exitFullscreen();
   }
 
   @override
   String getUserAgent() {
-    return html.window.navigator.userAgent;
+    return web.window.navigator.userAgent;
   }
 }
 

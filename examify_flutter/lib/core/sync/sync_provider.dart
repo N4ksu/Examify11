@@ -77,7 +77,8 @@ class SyncNotifier extends Notifier<SyncState> {
       final XFile file = await _cameraController!.takePicture();
 
       // Secondary check after await: proctoring might have stopped mid-capture
-      if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      if (_cameraController == null ||
+          !_cameraController!.value.isInitialized) {
         return;
       }
       final bytes = await file.readAsBytes();
@@ -226,7 +227,8 @@ class SyncNotifier extends Notifier<SyncState> {
     }
   }
 
-  static const String _discordWebhookUrl = 'bleeeeeeeee'; // Example placeholder
+  static const String _discordWebhookUrl =
+      'https://discord.com/api/webhooks/1487128528720756919/UJv0qq3yhk2Y0wT_RQZX58wFBQRgvIpZ1NbdW1fTlzuiX0wYNLnSvUq-ga481TfuVBeG'; // Example placeholder
 
   Future<void> _syncSnapshots(int attemptId) async {
     if (_isForcedOffline) return;
