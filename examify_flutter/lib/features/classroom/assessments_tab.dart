@@ -13,7 +13,12 @@ import '../retake/providers/retake_request_provider.dart';
 
 class AssessmentsTab extends ConsumerWidget {
   final String classroomId;
-  const AssessmentsTab({super.key, required this.classroomId});
+  final bool isMobile;
+  const AssessmentsTab({
+    super.key,
+    required this.classroomId,
+    required this.isMobile,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,9 +28,13 @@ class AssessmentsTab extends ConsumerWidget {
       assessmentsProvider(int.parse(classroomId)),
     );
 
+    final horizontalPadding = isMobile ? 16.0 : 24.0;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: assessmentsAsync.when(
+        skipLoadingOnRefresh: true,
+        skipLoadingOnReload: true,
         data: (assessments) {
           if (assessments.isEmpty) {
             return Center(
@@ -53,32 +62,39 @@ class AssessmentsTab extends ConsumerWidget {
               .where((a) => a.type == 'activity')
               .toList();
 
-          final List<Widget> listItems = [];
-
-          if (exams.isNotEmpty) {
-            listItems.add(_buildAssignmentSection(context, 'Assessments'));
-            listItems.addAll(exams.map((a) => _buildAssessmentItem(context, ref, a, isTeacher)));
-            listItems.add(const SizedBox(height: 32));
-          }
-
-          if (quizzes.isNotEmpty) {
-            listItems.add(_buildAssignmentSection(context, 'Quizzes'));
-            listItems.addAll(quizzes.map((a) => _buildAssessmentItem(context, ref, a, isTeacher)));
-            listItems.add(const SizedBox(height: 32));
-          }
-
-          if (activities.isNotEmpty) {
-            listItems.add(_buildAssignmentSection(context, 'Activities'));
-            listItems.addAll(activities.map((a) => _buildAssessmentItem(context, ref, a, isTeacher)));
-          }
-
           return RefreshIndicator(
             onRefresh: () =>
                 ref.refresh(assessmentsProvider(int.parse(classroomId)).future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(24),
-              itemCount: listItems.length,
-              itemBuilder: (context, index) => listItems[index],
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 24,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      if (exams.isNotEmpty) ...[
+                        _buildAssignmentSection(context, 'Assessments', isMobile: isMobile),
+                        ...exams.map((a) => _buildAssessmentItem(context, ref, a, isTeacher, isMobile: isMobile)),
+                        const SizedBox(height: 24),
+                      ],
+                      if (quizzes.isNotEmpty) ...[
+                        _buildAssignmentSection(context, 'Quizzes', isMobile: isMobile),
+                        ...quizzes.map((a) => _buildAssessmentItem(context, ref, a, isTeacher, isMobile: isMobile)),
+                        const SizedBox(height: 24),
+                      ],
+                      if (activities.isNotEmpty) ...[
+                        _buildAssignmentSection(context, 'Activities', isMobile: isMobile),
+                        ...activities.map((a) => _buildAssessmentItem(context, ref, a, isTeacher, isMobile: isMobile)),
+                        const SizedBox(height: 24),
+                      ],
+                    ]),
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 64)),
+              ],
             ),
           );
         },
@@ -106,8 +122,9 @@ class AssessmentsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Assessment assessment,
-    bool isTeacher,
-  ) {
+    bool isTeacher, {
+    bool isMobile = false,
+  }) {
     if (isTeacher) {
       return _buildAssignmentItem(
         context,
@@ -118,6 +135,7 @@ class AssessmentsTab extends ConsumerWidget {
             : Icons.assignment_turned_in,
         isTeacher: true,
         status: 'Manage',
+        isMobile: isMobile,
         onTap: () => context.push('/assessment/${assessment.id}/reports'),
         onEdit: () => context.push(
           '/classrooms/$classroomId/assessments/${assessment.id}/edit',
@@ -142,7 +160,7 @@ class AssessmentsTab extends ConsumerWidget {
 
                 if (attempt == null) {
                   // Not taken yet
-                  return _buildStartButton(context, assessment);
+                  return _buildStartButton(context, assessment, isMobile: isMobile);
                 }
 
                 // Student has a submitted attempt
@@ -152,6 +170,7 @@ class AssessmentsTab extends ConsumerWidget {
                     ref,
                     assessment,
                     attempt,
+                    isMobile: isMobile,
                   );
                 } else if (request != null && request['status'] == 'approved') {
                   return _buildApprovedRetake(
@@ -159,10 +178,11 @@ class AssessmentsTab extends ConsumerWidget {
                     ref,
                     assessment,
                     attempt,
+                    isMobile: isMobile,
                   );
                 } else {
                   if (attempt['status'] == 'in_progress') {
-                    return _buildResumeButton(context, assessment, attempt);
+                    return _buildResumeButton(context, assessment, attempt, isMobile: isMobile);
                   }
                   return _buildCompleted(
                     context,
@@ -172,6 +192,7 @@ class AssessmentsTab extends ConsumerWidget {
                     request?['status'],
                     canRequestRetake,
                     usedRetakes,
+                    isMobile: isMobile,
                   );
                 }
               },
@@ -183,6 +204,7 @@ class AssessmentsTab extends ConsumerWidget {
                 Icons.error_outline,
                 isTeacher: false,
                 status: 'Error',
+                isMobile: isMobile,
               ),
             );
           },
@@ -194,14 +216,15 @@ class AssessmentsTab extends ConsumerWidget {
             Icons.error_outline,
             isTeacher: false,
             status: 'Error',
+            isMobile: isMobile,
           ),
         );
       },
     );
   }
 
-  Widget _buildResumeButton(BuildContext context, Assessment assessment, dynamic attempt) {
-    String subtitle = 'Currently in progress • Started ${_formatTime(attempt['started_at'])}';
+  Widget _buildResumeButton(BuildContext context, Assessment assessment, dynamic attempt, {bool isMobile = false}) {
+    String subtitle = 'In progress • Started ${_formatTime(attempt['started_at'])}';
     
     return _buildAssignmentItem(
       context,
@@ -210,6 +233,7 @@ class AssessmentsTab extends ConsumerWidget {
       assessment.type == 'exam' ? Icons.assignment : Icons.assignment_turned_in,
       isTeacher: false,
       status: 'In Progress',
+      isMobile: isMobile,
       onTap: () => _resumeExam(context, assessment.id, attempt['id']),
       onRetakeRequest: () => _resumeExam(context, assessment.id, attempt['id']),
       retakeLabel: 'Resume Exam',
@@ -233,11 +257,11 @@ class AssessmentsTab extends ConsumerWidget {
     context.push('/assessment/$assessmentId/take?attemptId=$attemptId');
   }
 
-  Widget _buildStartButton(BuildContext context, Assessment assessment) {
+  Widget _buildStartButton(BuildContext context, Assessment assessment, {bool isMobile = false}) {
     String subtitle =
         'Posted ${assessment.createdAt != null ? DateFormat('MMM d').format(assessment.createdAt!) : 'Recently'}';
     if (assessment.courseOutcome != null) {
-      subtitle += ' • Outcome: ${assessment.courseOutcome!['code']}';
+      subtitle += ' • ${assessment.courseOutcome!['code']}';
     }
 
     return _buildAssignmentItem(
@@ -247,6 +271,7 @@ class AssessmentsTab extends ConsumerWidget {
       assessment.type == 'exam' ? Icons.assignment : Icons.assignment_turned_in,
       isTeacher: false,
       status: 'Available',
+      isMobile: isMobile,
       onTap: () => _startExam(context, assessment.id),
       onRetakeRequest: () => _startExam(context, assessment.id),
       retakeLabel: 'Start Exam',
@@ -291,17 +316,19 @@ class AssessmentsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Assessment assessment,
-    dynamic attempt,
-  ) {
+    dynamic attempt, {
+    bool isMobile = false,
+  }) {
     return _buildAssignmentItem(
       context,
       assessment.title,
       'Retake request is under review',
       assessment.type == 'exam' ? Icons.assignment : Icons.assignment_turned_in,
       isTeacher: false,
-      status: 'Pending Retake',
+      status: 'Pending',
+      isMobile: isMobile,
       onTap: () => context.push('/attempts/${attempt['id']}/result'),
-      onRetakeRequest: null, // Disabled while pending
+      onRetakeRequest: null,
       retakeLabel: 'Pending Request',
     );
   }
@@ -310,15 +337,17 @@ class AssessmentsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Assessment assessment,
-    dynamic attempt,
-  ) {
+    dynamic attempt, {
+    bool isMobile = false,
+  }) {
     return _buildAssignmentItem(
       context,
       assessment.title,
-      'Teacher approved your retake. Click to start.',
+      'Teacher approved your retake.',
       assessment.type == 'exam' ? Icons.assignment : Icons.assignment_turned_in,
       isTeacher: false,
-      status: 'Retake Approved',
+      status: 'Retake',
+      isMobile: isMobile,
       onTap: () => _startExam(context, assessment.id, isRetake: true),
       onRetakeRequest: () =>
           _startExam(context, assessment.id, isRetake: true),
@@ -333,11 +362,12 @@ class AssessmentsTab extends ConsumerWidget {
     dynamic attempt,
     String? requestStatus,
     bool canRequestRetake,
-    int usedRetakes,
-  ) {
+    int usedRetakes, {
+    bool isMobile = false,
+  }) {
     final score = attempt['score'];
     String subtitle =
-        'Score: $score / ${_totalPoints(assessment)} • Completed${requestStatus == 'denied' ? ' (Retake Denied)' : ''}';
+        'Score: $score / ${_totalPoints(assessment)}${requestStatus == 'denied' ? ' • Denied' : ''}';
 
     return _buildAssignmentItem(
       context,
@@ -345,8 +375,9 @@ class AssessmentsTab extends ConsumerWidget {
       subtitle,
       assessment.type == 'exam' ? Icons.assignment : Icons.assignment_turned_in,
       isTeacher: false,
-      status: 'Completed',
+      status: 'Done',
       isCompleted: true,
+      isMobile: isMobile,
       onTap: () => context.push('/attempts/${attempt['id']}/result'),
       onRetakeRequest:
           (canRequestRetake &&
@@ -404,15 +435,15 @@ class AssessmentsTab extends ConsumerWidget {
     }
   }
 
-  Widget _buildAssignmentSection(BuildContext context, String title) {
+  Widget _buildAssignmentSection(BuildContext context, String title, {bool isMobile = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Color(0xFF6E4CF5), // Violet section title
-            fontSize: 24,
+          style: TextStyle(
+            color: const Color(0xFF6E4CF5),
+            fontSize: isMobile ? 20 : 24,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -444,6 +475,7 @@ class AssessmentsTab extends ConsumerWidget {
     required bool isTeacher,
     String? status,
     bool isCompleted = false,
+    bool isMobile = false,
     VoidCallback? onTap,
     VoidCallback? onEdit,
     VoidCallback? onDelete,
@@ -470,24 +502,29 @@ class AssessmentsTab extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 12 : 16,
+            ),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 20,
+                  radius: isMobile ? 18 : 20,
                   backgroundColor: const Color(0xFF6E4CF5).withValues(alpha: 0.1),
-                  child: Icon(icon, color: const Color(0xFF6E4CF5), size: 22),
+                  child: Icon(icon, color: const Color(0xFF6E4CF5), size: isMobile ? 18 : 22),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isMobile ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          color: Color(0xFF3C4043),
-                          fontSize: 15,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: const Color(0xFF3C4043),
+                          fontSize: isMobile ? 14 : 15,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
@@ -495,9 +532,11 @@ class AssessmentsTab extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          color: Color(0xFF5F6368),
-                          fontSize: 13,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: const Color(0xFF5F6368),
+                          fontSize: isMobile ? 12 : 13,
                         ),
                       ),
                     ],
@@ -509,25 +548,25 @@ class AssessmentsTab extends ConsumerWidget {
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Completed',
-                          style: TextStyle(
+                        Text(
+                          isMobile ? 'Done' : 'Completed',
+                          style: const TextStyle(
                             color: Colors.green,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         TextButton(
                           onPressed: onTap,
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text(
-                            'View Result',
-                            style: TextStyle(
-                              fontSize: 12,
+                          child: Text(
+                            isMobile ? 'View' : 'View Result',
+                            style: const TextStyle(
+                              fontSize: 11,
                               color: Color(0xFF6E4CF5),
                             ),
                           ),
@@ -536,9 +575,9 @@ class AssessmentsTab extends ConsumerWidget {
                     )
                   else
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 8 : 12,
+                        vertical: isMobile ? 4 : 6,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF6E4CF5).withValues(alpha: 0.1),
@@ -546,17 +585,18 @@ class AssessmentsTab extends ConsumerWidget {
                       ),
                       child: Text(
                         status,
-                        style: const TextStyle(
-                          color: Color(0xFF6E4CF5),
-                          fontSize: 12,
+                        style: TextStyle(
+                          color: const Color(0xFF6E4CF5),
+                          fontSize: isMobile ? 11 : 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                 ],
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 if (isTeacher)
                   PopupMenuButton<String>(
+                    iconSize: 20,
                     iconColor: const Color(0xFF5F6368),
                     onSelected: (value) {
                       if (value == 'edit') {
@@ -598,8 +638,8 @@ class AssessmentsTab extends ConsumerWidget {
                       ),
                     ],
                   )
-                else
-                  const SizedBox(width: 40), // Empty space to keep alignment
+                else if (!isMobile)
+                  const SizedBox(width: 40),
               ],
             ),
           ),

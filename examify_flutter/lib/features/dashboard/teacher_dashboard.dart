@@ -24,35 +24,50 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   Widget build(BuildContext context) {
     final classroomsAsync = ref.watch(classroomsProvider);
     final user = ref.watch(authProvider.select((state) => state.user));
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 900;
 
     return Scaffold(
       backgroundColor: const Color(0xFFEFF5FB),
+      drawer: isMobile
+          ? Drawer(
+              width: 246,
+              backgroundColor: Colors.white,
+              child: _buildSidebar(user),
+            )
+          : null,
       body: Stack(
         children: [
           Positioned.fill(child: _buildBodyBackground()),
           Column(
             children: [
-              _buildTopBar(user),
+              _buildTopBar(context, user, isMobile),
               Expanded(
                 child: Row(
                   children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOut,
-                      width: _sidebarOpen ? 246 : 84,
-                      clipBehavior: Clip.hardEdge,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        border: Border(
-                          right: BorderSide(color: Color(0xFFD6E1EC)),
+                    if (!isMobile)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                        width: _sidebarOpen ? 246 : 84,
+                        clipBehavior: Clip.hardEdge,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            right: BorderSide(color: Color(0xFFD6E1EC)),
+                          ),
                         ),
+                        child: _buildSidebar(user),
                       ),
-                      child: _buildSidebar(user),
-                    ),
                     Expanded(
                       child: Container(
                         color: Colors.transparent,
-                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                        padding: EdgeInsets.fromLTRB(
+                          isMobile ? 12 : 22,
+                          18,
+                          isMobile ? 12 : 22,
+                          18,
+                        ),
                         child: _selectedPage == 'analytics'
                             ? const SingleChildScrollView(
                                 child: GlobalAnalyticsSection(),
@@ -61,7 +76,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                             ? const RetakeRequestsScreen()
                             : classroomsAsync.when(
                                 data: (classrooms) =>
-                                    _buildClassesArea(context, classrooms),
+                                    _buildClassesArea(context, classrooms, isMobile),
                                 loading: () => const Center(
                                   child: CircularProgressIndicator(
                                     color: Color(0xFF6E4CF5),
@@ -136,7 +151,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     );
   }
 
-  Widget _buildTopBar(User? user) {
+  Widget _buildTopBar(BuildContext context, User? user, bool isMobile) {
     return Container(
       height: 92,
       decoration: const BoxDecoration(
@@ -148,102 +163,104 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 430,
-            height: double.infinity,
-            constraints: const BoxConstraints(minWidth: 240, maxWidth: 460),
+          Expanded(
             child: Row(
               children: [
-                const SizedBox(width: 14),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _sidebarOpen = !_sidebarOpen;
-                    });
-                  },
-                  child: const SizedBox(
-                    width: 62,
-                    height: 62,
-                    child: Icon(
+                const SizedBox(width: 8),
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(
                       Icons.menu_rounded,
                       color: Colors.white,
-                      size: 34,
+                      size: 30,
                     ),
+                    onPressed: () {
+                      if (isMobile) {
+                        Scaffold.of(context).openDrawer();
+                      } else {
+                        setState(() {
+                          _sidebarOpen = !_sidebarOpen;
+                        });
+                      }
+                    },
                   ),
                 ),
-                const SizedBox(width: 16),
-                Image.asset('assets/cite_logo.webp', height: 44),
+                const SizedBox(width: 4),
+                Image.asset('assets/cite_logo.webp', height: isMobile ? 32 : 44),
+                const SizedBox(width: 6),
+                Image.asset('assets/jmc_logo.webp', height: isMobile ? 30 : 40),
                 const SizedBox(width: 10),
-                Image.asset('assets/jmc_logo.webp', height: 40),
-                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
                         'JOSE MARIA COLLEGE',
-                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
                           fontFamily: 'OldEnglish',
                           letterSpacing: 0.5,
                         ),
                       ),
-                      Text(
-                        'Foundation, Inc.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                      if (!isMobile) ...[
+                        Text(
+                          'Foundation, Inc.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Assured • Consistent • Quality Education',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w400,
+                        Text(
+                          'Assured • Consistent • Quality Education',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF9A2F),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'TEACHER',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
+          if (!isMobile) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF9A2F),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'TEACHER',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 18),
+            const SizedBox(width: 12),
+          ],
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.refresh_rounded,
               color: Colors.white,
-              size: 28,
+              size: isMobile ? 24 : 28,
             ),
             tooltip: 'Refresh All Data',
             onPressed: () {
               ref.invalidate(classroomsProvider);
               ref.invalidate(pendingRetakeRequestsProvider);
-              // Add other providers here if needed
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Refreshing dashboard data...'),
@@ -252,13 +269,11 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               );
             },
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           PopupMenuButton<String>(
             tooltip: 'Account',
             onSelected: (value) {
-              if (value == 'profile') {
-                context.push('/profile');
-              }
+              if (value == 'profile') context.push('/profile');
               if (value == 'logout') {
                 ref.read(authProvider.notifier).logout();
                 context.go('/');
@@ -281,19 +296,20 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               ),
             ],
             child: CircleAvatar(
-              radius: 22,
+              radius: isMobile ? 18 : 22,
               backgroundColor: const Color(0xFFE7ECF3),
               child: Text(
                 (user?.name.isNotEmpty == true ? user!.name[0] : 'T')
                     .toUpperCase(),
-                style: const TextStyle(
-                  color: Color(0xFF55657F),
+                style: TextStyle(
+                  color: const Color(0xFF55657F),
+                  fontSize: isMobile ? 14 : 16,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 14),
         ],
       ),
     );
@@ -398,7 +414,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   ),
                 ),
               ),
-              ?trailing,
+              trailing ?? const SizedBox.shrink(),
               const SizedBox(width: 8),
             ],
           ],
@@ -407,13 +423,16 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     );
   }
 
-  Widget _buildClassesArea(BuildContext context, List classrooms) {
+  Widget _buildClassesArea(BuildContext context, List classrooms, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 14 : 22,
+            vertical: isMobile ? 12 : 18,
+          ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -427,9 +446,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             border: Border.all(color: const Color(0xFFD6E3EF)),
           ),
           child: Row(
-            children: const [
+            children: [
               DecoratedBox(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -438,33 +457,39 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   borderRadius: BorderRadius.all(Radius.circular(14)),
                 ),
                 child: SizedBox(
-                  width: 46,
-                  height: 46,
-                  child: Icon(Icons.auto_stories_rounded, color: Colors.white),
+                  width: isMobile ? 38 : 46,
+                  height: isMobile ? 38 : 46,
+                  child: Icon(
+                    Icons.auto_stories_rounded,
+                    color: Colors.white,
+                    size: isMobile ? 20 : 24,
+                  ),
                 ),
               ),
-              SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Teaching Classes',
-                    style: TextStyle(
-                      color: Color(0xFF6A7C97),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Teaching Classes',
+                      style: TextStyle(
+                        color: const Color(0xFF6A7C97),
+                        fontSize: isMobile ? 14 : 16,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Open your classes, monitor students, and manage join codes.',
-                    style: TextStyle(
-                      color: Color(0xFF8B9AB1),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Open your classes, monitor students, and manage join codes.',
+                      style: TextStyle(
+                        color: const Color(0xFF8B9AB1),
+                        fontSize: isMobile ? 11 : 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -472,27 +497,33 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         const SizedBox(height: 18),
         Expanded(
           child: classrooms.isEmpty
-              ? _buildCreateCard(context)
-              : Wrap(
-                  spacing: 28,
-                  runSpacing: 24,
-                  children: [
-                    for (final classroom in classrooms)
-                      _buildClassCard(context, classroom),
-                    _buildCreateCard(context),
-                  ],
+              ? _buildCreateCard(context, isMobile)
+              : SingleChildScrollView(
+                  child: Wrap(
+                    spacing: isMobile ? 16 : 28,
+                    runSpacing: isMobile ? 16 : 24,
+                    children: [
+                      for (final classroom in classrooms)
+                        _buildClassCard(context, classroom, isMobile),
+                      _buildCreateCard(context, isMobile),
+                    ],
+                  ),
                 ),
         ),
       ],
     );
   }
 
-  Widget _buildClassCard(BuildContext context, dynamic classroom) {
+  Widget _buildClassCard(BuildContext context, dynamic classroom, bool isMobile) {
+    final cardWidth = isMobile
+        ? (MediaQuery.of(context).size.width - 40)
+        : 320.0;
+
     return InkWell(
       onTap: () => context.push('/classroom/${classroom.id}'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 320,
+        width: cardWidth,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -509,24 +540,27 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: 110,
-              decoration: BoxDecoration(
+              height: isMobile ? 90 : 110,
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFFE5D8FF),
-                    const Color(0xFFD6EAFF),
-                    const Color(0xFFFBEAF0),
+                    Color(0xFFE5D8FF),
+                    Color(0xFFD6EAFF),
+                    Color(0xFFFBEAF0),
                   ],
                 ),
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(18),
                   topRight: Radius.circular(18),
                 ),
               ),
               child: Center(
-                child: Image.asset('assets/cite_logo.webp', height: 68),
+                child: Image.asset(
+                  'assets/cite_logo.webp',
+                  height: isMobile ? 54 : 68,
+                ),
               ),
             ),
             Padding(
@@ -540,27 +574,31 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF24364E),
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Students: ${classroom.studentsCount ?? 0}',
-                    style: const TextStyle(
-                      color: Color(0xFF73839D),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                   const SizedBox(height: 6),
-                  Text(
-                    'Code: ${classroom.joinCode}',
-                    style: const TextStyle(
-                      color: Color(0xFF6E4CF5),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Students: ${classroom.studentsCount ?? 0}',
+                        style: const TextStyle(
+                          color: Color(0xFF73839D),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Code: ${classroom.joinCode}',
+                        style: const TextStyle(
+                          color: Color(0xFF6E4CF5),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -571,28 +609,31 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     );
   }
 
-  Widget _buildCreateCard(BuildContext context) {
+  Widget _buildCreateCard(BuildContext context, bool isMobile) {
+    final cardWidth = isMobile
+        ? (MediaQuery.of(context).size.width - 40)
+        : 320.0;
+
     return InkWell(
       onTap: () => _showCreateClassroomDialog(context),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 320,
-        height: 190,
+        width: cardWidth,
+        height: isMobile ? 120 : 190,
         decoration: BoxDecoration(
           color: const Color(0xFFF3F8FD),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: const Color(0xFFCCD8E3),
             width: 4,
-            style: BorderStyle.solid,
           ),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             '+ Create classroom',
             style: TextStyle(
-              color: Color(0xFFAEBBCB),
-              fontSize: 18,
+              color: const Color(0xFFAEBBCB),
+              fontSize: isMobile ? 16 : 18,
               fontWeight: FontWeight.w900,
             ),
           ),

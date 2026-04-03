@@ -452,6 +452,9 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
       assessmentDetailProvider(int.parse(widget.assessmentId)),
     );
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 900;
+
     return PopScope(
       canPop: false,
       child: assessmentAsync.when(
@@ -470,7 +473,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
             }
             _isQuestionsInitialized = true;
           }
-          return _buildMainLayout(context, assessment);
+          return _buildMainLayout(context, assessment, isMobile);
         },
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -483,12 +486,16 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
 
 
 
-  Widget _buildMainLayout(BuildContext context, Assessment assessment) {
+  Widget _buildMainLayout(
+    BuildContext context,
+    Assessment assessment,
+    bool isMobile,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Stack(
           children: [
-            _buildExamUI(context, assessment),
+            _buildExamUI(context, assessment, isMobile),
             ProctoringCameraPreview(attemptId: widget.attemptId),
           ],
         );
@@ -496,7 +503,11 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
     );
   }
 
-  Widget _buildExamUI(BuildContext context, Assessment assessment) {
+  Widget _buildExamUI(
+    BuildContext context,
+    Assessment assessment,
+    bool isMobile,
+  ) {
     final questions = assessment.questions;
     final user = ref.watch(authProvider.select((state) => state.user));
     
@@ -517,8 +528,16 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
       ipAddress: '127.0.0.1', // Placeholder for IP
       child: Scaffold(
         backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
+        endDrawer: isMobile
+            ? Drawer(
+                width: 250,
+                child: SafeArea(
+                  child: _buildNavigationSidebar(questions),
+                ),
+              )
+            : null,
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(isMobile ? 70 : 80),
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -532,10 +551,15 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Image.asset('assets/cite_logo.webp', height: 40),
+                  Image.asset(
+                    'assets/cite_logo.webp',
+                    height: isMobile ? 32 : 40,
+                  ),
                   const SizedBox(width: 8),
-                  Image.asset('assets/jmc_logo.webp', height: 36),
-                  const SizedBox(width: 12),
+                  if (!isMobile) ...[
+                    Image.asset('assets/jmc_logo.webp', height: 36),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -543,9 +567,9 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                       children: [
                         Text(
                           '${assessment.title} - Proctored',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: isMobile ? 14 : 16,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -555,46 +579,60 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                           'Total Points: $totalPoints',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 12,
+                            fontSize: isMobile ? 11 : 12,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const SyncStatusIndicator(),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Force Offline', style: TextStyle(color: Colors.white, fontSize: 10)),
-                      SizedBox(
-                        height: 24,
-                        child: Switch(
-                          value: !ref.watch(syncProvider.select((state) => state.isOnline)),
-                          activeThumbColor: Colors.orange,
-                          onChanged: (val) {
-                            ref.read(syncProvider.notifier).toggleForcedOffline(val);
-                            if (!val) {
-                               // Try to sync if coming back online
-                               ref.read(syncProvider.notifier).forceSync(widget.attemptId);
-                            }
-                          },
-                        ),
+                  if (!isMobile) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    ],
-                  ),
-                  const SizedBox(width: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const SyncStatusIndicator(),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Force Offline',
+                          style: TextStyle(color: Colors.white, fontSize: 10),
+                        ),
+                        SizedBox(
+                          height: 24,
+                          child: Switch(
+                            value: !ref.watch(
+                              syncProvider.select((state) => state.isOnline),
+                            ),
+                            activeThumbColor: Colors.orange,
+                            onChanged: (val) {
+                              ref
+                                  .read(syncProvider.notifier)
+                                  .toggleForcedOffline(val);
+                              if (!val) {
+                                // Try to sync if coming back online
+                                ref
+                                    .read(syncProvider.notifier)
+                                    .forceSync(widget.attemptId);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                  ],
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 12,
+                      vertical: isMobile ? 4 : 8,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
@@ -607,6 +645,14 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                       },
                     ),
                   ),
+                  if (isMobile)
+                    Builder(
+                      builder: (context) => IconButton(
+                        icon: const Icon(Icons.menu, color: Colors.white),
+                        onPressed: () => Scaffold.of(context).openEndDrawer(),
+                      ),
+                    ),
+                  const SizedBox(width: 4),
                 ],
               ),
             ),
@@ -623,14 +669,14 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                   builder: (context, strikes, child) {
                     if (strikes == 0) return const SizedBox.shrink();
                     return Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(isMobile ? 16 : 32),
                       child: ViolationBanner(violationCount: strikes),
                     );
                   },
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
                     child: Card(
                       color: Colors.white,
                       elevation: 2,
@@ -639,7 +685,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                         side: BorderSide(color: Colors.grey.shade200),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(24.0),
+                        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -675,10 +721,10 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
                             const SizedBox(height: 12),
                             Text(
                               currentQuestion.body,
-                              style: const TextStyle(
-                                fontSize: 22,
+                              style: TextStyle(
+                                fontSize: isMobile ? 18 : 22,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF0F172A),
+                                color: const Color(0xFF0F172A),
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -848,7 +894,7 @@ class _TakeAssessmentScreenState extends ConsumerState<TakeAssessmentScreen> wit
               ],
             ),
           ),
-          _buildNavigationSidebar(questions),
+          if (!isMobile) _buildNavigationSidebar(questions),
         ],
       ),
      ),

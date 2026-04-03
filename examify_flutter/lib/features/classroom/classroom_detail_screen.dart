@@ -45,11 +45,17 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
       if (user?.role.name == 'student') {
         _pollTimer?.cancel(); // Ensure no duplicate timers
         _pollTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-          if (mounted && _assessmentIds.isNotEmpty) {
-            for (final id in _assessmentIds) {
-              ref.invalidate(assessmentStatusProvider(id));
-              ref.invalidate(studentAttemptProvider(id));
-              ref.invalidate(retakeRequestStatusProvider(id));
+          if (mounted) {
+            // Check for new assessments
+            ref.invalidate(assessmentsProvider(int.parse(widget.id)));
+            
+            // Refresh status for existing assessments
+            if (_assessmentIds.isNotEmpty) {
+              for (final id in _assessmentIds) {
+                ref.invalidate(assessmentStatusProvider(id));
+                ref.invalidate(studentAttemptProvider(id));
+                ref.invalidate(retakeRequestStatusProvider(id));
+              }
             }
           }
         });
@@ -65,178 +71,65 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
       assessmentsProvider(int.parse(widget.id)),
     );
 
-    // Update assessment IDs for polling
-    assessmentsAsync.whenData((assessments) {
-      final ids = assessments.map((a) => a.id).toList();
-      // Only update if the list has changed to avoid unnecessary rebuilds
-      if (_assessmentIds.length != ids.length ||
-          !_assessmentIds.every((id) => ids.contains(id))) {
-        Future.microtask(() {
-          if (mounted) {
-            setState(() {
-              _assessmentIds = ids;
-            });
-          }
-        });
-      }
-    });
+    // Update assessment IDs for polling via direct state update instead of Future.microtask if in build
+    // Better yet, we can use a lifecycle listener but for now let's just make it cleaner
+    final ids = assessmentsAsync.asData?.value.map((a) => a.id).toList() ?? [];
+    if (ids.isNotEmpty && 
+        (_assessmentIds.length != ids.length || !_assessmentIds.every((id) => ids.contains(id)))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _assessmentIds = ids);
+        }
+      });
+    }
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 900;
 
     final screens = [
-      StreamTab(classroomId: widget.id),
-      AssessmentsTab(classroomId: widget.id),
-      PeopleTab(classroomId: widget.id),
-    ];
-
-    final tabs = [
-      {'icon': Icons.dashboard_outlined, 'label': 'Stream'},
-      {'icon': Icons.assignment_outlined, 'label': 'Classwork'},
-      {'icon': Icons.people_outline, 'label': 'People'},
+      StreamTab(classroomId: widget.id, isMobile: isMobile),
+      AssessmentsTab(classroomId: widget.id, isMobile: isMobile),
+      PeopleTab(classroomId: widget.id, isMobile: isMobile),
     ];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
+      drawer: isMobile
+          ? Drawer(
+              width: 240,
+              backgroundColor: Colors.white,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    Expanded(child: _buildSidebarContent(classroomAsync, user)),
+                  ],
+                ),
+              ),
+            )
+          : null,
       body: Column(
         children: [
           // ── Top Bar ──────────────────────────────────────────────
-          _buildTopBar(context, classroomAsync),
+          _buildTopBar(context, classroomAsync, isMobile),
 
           // ── Body: Sidebar + Content ─────────────────────────────
           Expanded(
             child: Row(
               children: [
                 // ── Collapsible Sidebar ───────────────────────────
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOut,
-                  width: _sidebarOpen ? 240 : 0,
-                  clipBehavior: Clip.hardEdge,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(right: BorderSide(color: Color(0xFFE8E8E8))),
-                  ),
-                  child: SizedBox(
-                    width: 240,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Classroom name header
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
-                          child: classroomAsync.when(
-                            data: (classroom) => Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Color(0xFF8B1A24), // Maroon
-                                  ),
-                                  clipBehavior: Clip.hardEdge,
-                                  child: Image.asset(
-                                    'assets/cite_logo.webp',
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Flexible(
-                                  child: Text(
-                                    classroom.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(0xFF7B1FA2),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            loading: () => const SizedBox.shrink(),
-                            error: (_, _) => const SizedBox.shrink(),
-                          ),
-                        ),
-
-                        // Navigation items
-                        Expanded(
-                          child: ListView.builder(
-                            padding: const EdgeInsets.only(top: 4),
-                            itemCount: tabs.length,
-                            itemBuilder: (context, index) {
-                              final isSelected = _selectedIndex == index;
-                              final tab = tabs[index];
-                              return _SidebarNavItem(
-                                icon: tab['icon'] as IconData,
-                                label: tab['label'] as String,
-                                isSelected: isSelected,
-                                showChevron: isSelected && index == 0,
-                                onTap: () =>
-                                    setState(() => _selectedIndex = index),
-                              );
-                            },
-                          ),
-                        ),
-
-                        // User info at bottom
-                        Container(
-                          margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE8E8E8)),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: const Color(
-                                  0xFF9068F5,
-                                ), // Softer purple
-                                child: Icon(
-                                  Icons.email_outlined,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      user?.email ?? 'user@email.com',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF444444),
-                                      ),
-                                    ),
-                                    const Text(
-                                      'Signed in',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF999999),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                if (!isMobile)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
+                    width: _sidebarOpen ? 240 : 0,
+                    clipBehavior: Clip.hardEdge,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border:
+                          Border(right: BorderSide(color: Color(0xFFE8E8E8))),
                     ),
+                    child: _buildSidebarContent(classroomAsync, user),
                   ),
-                ),
 
                 // ── Main Content Area ─────────────────────────────
                 Expanded(
@@ -256,7 +149,144 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context, AsyncValue classroomAsync) {
+  Widget _buildSidebarContent(AsyncValue classroomAsync, dynamic user) {
+    final tabs = [
+      {'icon': Icons.dashboard_outlined, 'label': 'Stream'},
+      {'icon': Icons.assignment_outlined, 'label': 'Classwork'},
+      {'icon': Icons.people_outline, 'label': 'People'},
+    ];
+
+    return SizedBox(
+      width: 240,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Classroom name header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
+            child: classroomAsync.when(
+              data: (classroom) => Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF8B1A24), // Maroon
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: Image.asset(
+                      'assets/cite_logo.webp',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        classroom.name.toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF7B1FA2),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+          ),
+
+          // Navigation items
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.only(top: 4),
+              itemCount: tabs.length,
+              itemBuilder: (context, index) {
+                final isSelected = _selectedIndex == index;
+                final tab = tabs[index];
+                return _SidebarNavItem(
+                  icon: tab['icon'] as IconData,
+                  label: tab['label'] as String,
+                  isSelected: isSelected,
+                  showChevron: isSelected && index == 0,
+                  onTap: () {
+                    setState(() => _selectedIndex = index);
+                    if (MediaQuery.of(context).size.width < 900) {
+                      Navigator.pop(context);
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+
+          // User info at bottom
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE8E8E8)),
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Color(0xFF9068F5), // Softer purple
+                  child: Icon(
+                    Icons.email_outlined,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        user?.email ?? 'user@email.com',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF444444),
+                        ),
+                      ),
+                      const Text(
+                        'Signed in',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF999999),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar(
+    BuildContext context,
+    AsyncValue classroomAsync,
+    bool isMobile,
+  ) {
     return Container(
       height: 92,
       decoration: const BoxDecoration(
@@ -273,11 +303,16 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
             left: 0,
             top: 0,
             bottom: 0,
+            right: 80, // Leave space for right actions
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
+                const SizedBox(width: 4),
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: isMobile ? 22 : 24,
+                  ),
                   onPressed: () {
                     if (context.canPop()) {
                       context.pop();
@@ -287,50 +322,66 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                     }
                   },
                 ),
-                InkWell(
-                  onTap: () => setState(() => _sidebarOpen = !_sidebarOpen),
-                  child: const SizedBox(
-                    width: 56,
-                    height: 64,
-                    child: Icon(Icons.menu, color: Colors.white, size: 24),
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                      size: isMobile ? 22 : 24,
+                    ),
+                    onPressed: () {
+                      if (isMobile) {
+                        Scaffold.of(context).openDrawer();
+                      } else {
+                        setState(() => _sidebarOpen = !_sidebarOpen);
+                      }
+                    },
                   ),
                 ),
-                Image.asset('assets/cite_logo.webp', height: 44),
-                const SizedBox(width: 8),
-                Image.asset('assets/jmc_logo.webp', height: 40),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'JOSE MARIA COLLEGE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: 'OldEnglish',
-                        letterSpacing: 0.5,
+                Image.asset('assets/cite_logo.webp', height: isMobile ? 32 : 44),
+                const SizedBox(width: 6),
+                Image.asset('assets/jmc_logo.webp', height: isMobile ? 30 : 40),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'JOSE MARIA COLLEGE',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'OldEnglish',
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Foundation, Inc.',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      'Assured • Consistent • Quality Education',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
+                      if (!isMobile) ...[
+                        Text(
+                          'Foundation, Inc.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          'Assured • Consistent • Quality Education',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -338,7 +389,7 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
 
           // Right actions
           Positioned(
-            right: 0,
+            right: 12,
             top: 0,
             bottom: 0,
             child: Row(
@@ -346,7 +397,11 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
               children: [
                 if (ref.watch(authProvider.select((state) => state.user))?.role.name == 'student')
                   IconButton(
-                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    icon: Icon(
+                      Icons.refresh,
+                      color: Colors.white,
+                      size: isMobile ? 24 : 28,
+                    ),
                     tooltip: 'Refresh Status',
                     onPressed: () {
                       for (final id in _assessmentIds) {
@@ -360,7 +415,6 @@ class _ClassroomDetailScreenState extends ConsumerState<ClassroomDetailScreen> {
                       );
                     },
                   ),
-                const SizedBox(width: 8),
               ],
             ),
           ),

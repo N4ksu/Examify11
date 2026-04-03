@@ -13,7 +13,8 @@ import '../../shared/models/announcement.dart';
 
 class StreamTab extends ConsumerWidget {
   final String classroomId;
-  const StreamTab({super.key, required this.classroomId});
+  final bool isMobile;
+  const StreamTab({super.key, required this.classroomId, required this.isMobile});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,7 +25,7 @@ class StreamTab extends ConsumerWidget {
     final announcementsAsync = ref.watch(announcementsProvider(classroomId));
 
     return Scaffold(
-      backgroundColor: Colors.white, // Modern GC white background
+      backgroundColor: Colors.white,
       body: classroomAsync.when(
         data: (classroom) => RefreshIndicator(
           onRefresh: () async {
@@ -33,60 +34,89 @@ class StreamTab extends ConsumerWidget {
             await ref.read(classroomDetailProvider(classroomId).future);
             await ref.read(announcementsProvider(classroomId).future);
           },
-          child: SingleChildScrollView(
+          child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              children: [
-                // Banner Section
-                _buildBanner(context, classroom, isTeacher, ref),
-                const SizedBox(height: 24),
-    
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left Column: Meet & Upcoming (Desktop/Tablet)
-                    if (MediaQuery.of(context).size.width > 800)
-                      SizedBox(
-                        width: 200,
-                        child: Column(
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  isMobile ? 16 : 24,
+                  16,
+                  isMobile ? 16 : 24,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      // Banner Section
+                      _buildBanner(context, classroom, isTeacher, ref, isMobile),
+                      const SizedBox(height: 24),
+
+                      if (isMobile) ...[
+                        // Mobile Layout: Header items
+                        if (isTeacher) ...[
+                          _buildClassCodeCard(context, classroom),
+                          const SizedBox(height: 16),
+                        ],
+                        _buildUpcomingCard(context),
+                        const SizedBox(height: 24),
+                        _buildAnnouncementInput(context, isTeacher, ref),
+                      ] else ...[
+                        // Desktop Layout: Started in a Row, but we'll handle the announcements separately
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (isTeacher) ...[
-                              _buildClassCodeCard(context, classroom),
-                              const SizedBox(height: 16),
-                            ],
-                            _buildUpcomingCard(context),
+                            // Left Column: Meet & Upcoming
+                            SizedBox(
+                              width: 200,
+                              child: Column(
+                                children: [
+                                  if (isTeacher) ...[
+                                    _buildClassCodeCard(context, classroom),
+                                    const SizedBox(height: 16),
+                                  ],
+                                  _buildUpcomingCard(context),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            // Right Column: Announcement Input Only (List will be outside)
+                            Expanded(
+                              child: _buildAnnouncementInput(context, isTeacher, ref),
+                            ),
                           ],
                         ),
-                      ),
-    
-                    const SizedBox(width: 24),
-    
-                    // Right Column: Announcements
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildAnnouncementInput(context, isTeacher, ref),
-                          const SizedBox(height: 16),
-                          announcementsAsync.when(
-                            data: (announcements) => _buildAnnouncementList(
-                              context,
-                              isTeacher,
-                              announcements,
-                              ref,
-                            ),
-                            loading: () =>
-                                const Center(child: CircularProgressIndicator()),
-                            error: (err, stack) =>
-                                Center(child: Text('Error: $err')),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                      ],
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+
+              // Announcements List (Sliver for performance)
+              announcementsAsync.when(
+                data: (announcements) => _buildSliverAnnouncementList(
+                  context,
+                  isTeacher,
+                  announcements,
+                  ref,
+                  isMobile,
+                ),
+                loading: () => const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                ),
+                error: (err, stack) => SliverToBoxAdapter(
+                  child: Center(child: Text('Error: $err')),
+                ),
+              ),
+              
+              // Bottom padding
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -100,10 +130,11 @@ class StreamTab extends ConsumerWidget {
     Classroom classroom,
     bool isTeacher,
     WidgetRef ref,
+    bool isMobile,
   ) {
     return Container(
       width: double.infinity,
-      height: 240,
+      height: isMobile ? 140 : 200, // Reduced from 240
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16), // Less rounded like GC
         gradient: const LinearGradient(
@@ -152,10 +183,12 @@ class StreamTab extends ConsumerWidget {
               children: [
                 Text(
                   classroom.name,
-                  style: const TextStyle(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w600, // Medium bold
-                    fontSize: 32,
+                    fontWeight: FontWeight.w600,
+                    fontSize: isMobile ? 24 : 32,
                   ),
                 ),
                 if (classroom.description != null) ...[
@@ -437,82 +470,23 @@ class StreamTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildAnnouncementList(
+  Widget _buildSliverAnnouncementList(
     BuildContext context,
     bool isTeacher,
     List<Announcement> announcements,
     WidgetRef ref,
+    bool isMobile,
   ) {
     if (announcements.isEmpty) {
-      return Center(
-        child: Container(
-          margin: const EdgeInsets.only(top: 24),
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F3F4), // Light grey
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.chat_bubble_outline_rounded,
-                  size: 32,
-                  color: Color(0xFF5F6368),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'No announcements yet',
-                style: TextStyle(
-                  color: Color(0xFF202124),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Post announcements to share updates, materials,\nand messages with your class',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF5F6368),
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: announcements.length,
-      itemBuilder: (context, index) {
-        final ann = announcements[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+      return SliverToBoxAdapter(
+        child: Center(
           child: Container(
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(top: 24),
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              vertical: isMobile ? 40 : 64,
+              horizontal: 24,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
@@ -526,115 +500,208 @@ class StreamTab extends ConsumerWidget {
               ],
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFF1967D2),
-                      child: Text(
-                        ann.teacher?.name[0] ?? '?',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(fontSize: 14, color: Color(0xFF3C4043)),
-                              children: [
-                                TextSpan(
-                                  text: '${ann.teacher?.name ?? 'Teacher'} ',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF3C4043),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ann.title,
-                                  style: const TextStyle(color: Color(0xFF5F6368)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            DateFormat('MMM d, yyyy').format(ann.createdAt),
-                            style: const TextStyle(color: Color(0xFF5F6368), fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isTeacher)
-                      PopupMenuButton<String>(
-                        iconColor: const Color(0xFF5F6368),
-                        onSelected: (value) async {
-                          if (value == 'edit') {
-                            _showPostAnnouncementDialog(
-                              context,
-                              isTeacher,
-                              ref,
-                              announcement: ann,
-                            );
-                          } else if (value == 'delete') {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                backgroundColor: Colors.white,
-                                surfaceTintColor: Colors.white,
-                                title: const Text('Delete Announcement', style: TextStyle(color: Color(0xFF3C4043))),
-                                content: const Text(
-                                  'Are you sure you want to delete this announcement?',
-                                  style: TextStyle(color: Color(0xFF5F6368)),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(ctx, false),
-                                    child: const Text('Cancel', style: TextStyle(color: Color(0xFF5F6368))),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(ctx, true),
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              await AnnouncementActions(
-                                ref,
-                                classroomId,
-                              ).delete(ann.id);
-                            }
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Text('Edit'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Delete'),
-                          ),
-                        ],
-                      ),
-                  ],
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F3F4),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 32,
+                    color: Color(0xFF5F6368),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                Text(ann.body, style: const TextStyle(color: Color(0xFF3C4043), fontSize: 14)),
+                const SizedBox(height: 24),
+                const Text(
+                  'No announcements yet',
+                  style: TextStyle(
+                    color: Color(0xFF202124),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Post announcements to share updates, materials,\nand messages with your class',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF5F6368),
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 24,
+      ),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final ann = announcements[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: const Color(0xFF1967D2),
+                          child: Text(
+                            ann.teacher?.name[0] ?? '?',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF3C4043),
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: '${ann.teacher?.name ?? 'Teacher'} ',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF3C4043),
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: ann.title,
+                                      style: const TextStyle(
+                                        color: Color(0xFF5F6368),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                DateFormat('MMM d, yyyy').format(ann.createdAt),
+                                style: const TextStyle(
+                                  color: Color(0xFF5F6368),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isTeacher)
+                          PopupMenuButton<String>(
+                            iconColor: const Color(0xFF5F6368),
+                            onSelected: (value) async {
+                              if (value == 'edit') {
+                                _showPostAnnouncementDialog(
+                                  context,
+                                  isTeacher,
+                                  ref,
+                                  announcement: ann,
+                                );
+                              } else if (value == 'delete') {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    backgroundColor: Colors.white,
+                                    surfaceTintColor: Colors.white,
+                                    title: const Text(
+                                      'Delete Announcement',
+                                      style: TextStyle(color: Color(0xFF3C4043)),
+                                    ),
+                                    content: const Text(
+                                      'Are you sure you want to delete this announcement?',
+                                      style: TextStyle(color: Color(0xFF5F6368)),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(color: Color(0xFF5F6368)),
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: const Text(
+                                          'Delete',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await AnnouncementActions(
+                                    ref,
+                                    classroomId,
+                                  ).delete(ann.id);
+                                }
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Edit'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      ann.body,
+                      style: const TextStyle(
+                        color: Color(0xFF3C4043),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          childCount: announcements.length,
+        ),
+      ),
     );
   }
 }
@@ -1278,71 +1345,71 @@ class _AnnouncementComposerState extends State<_AnnouncementComposer> {
                   icon: Icons.chat_bubble_outline_rounded,
                   maxLines: 4,
                 ),
-                  if (_attachedImages.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 90,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _attachedImages.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, i) {
-                          final file = _attachedImages[i];
-                          return Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: file.path != null
-                                    ? Image.file(
-                                        File(file.path!),
-                                        width: 90,
-                                        height: 90,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        width: 90,
-                                        height: 90,
-                                        color: const Color(0xFF2D3D57),
-                                        child: const Icon(
-                                          Icons.image,
-                                          color: Colors.white54,
-                                        ),
+                if (_attachedImages.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 90,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _attachedImages.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemBuilder: (context, i) {
+                        final file = _attachedImages[i];
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: file.path != null
+                                  ? Image.file(
+                                      File(file.path!),
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      width: 90,
+                                      height: 90,
+                                      color: const Color(0xFFF1F3F4),
+                                      child: const Icon(
+                                        Icons.image,
+                                        color: Colors.white54,
                                       ),
-                              ),
-                              Positioned(
-                                top: -6,
-                                right: -6,
-                                child: GestureDetector(
-                                  onTap: () => _removeImage(i),
-                                  child: Container(
-                                    width: 22,
-                                    height: 22,
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade600,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                    ),
+                            ),
+                            Positioned(
+                              top: -6,
+                              right: -6,
+                              child: GestureDetector(
+                                onTap: () => _removeImage(i),
+                                child: Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade600,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
                                       color: Colors.white,
                                       width: 2,
-                                      ),
                                     ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 12,
-                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 12,
                                   ),
                                 ),
                               ),
-                            ],
-                          );
-                        },
-                      ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
+          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(

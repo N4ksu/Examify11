@@ -21,37 +21,53 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
   Widget build(BuildContext context) {
     final classroomsAsync = ref.watch(classroomsProvider);
     final user = ref.watch(authProvider.select((state) => state.user));
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 900;
+
     return Scaffold(
       backgroundColor: const Color(0xFFEFF5FB),
+      drawer: isMobile
+          ? Drawer(
+              width: 246,
+              backgroundColor: Colors.white,
+              child: _buildSidebar(context, user),
+            )
+          : null,
       body: Stack(
         children: [
           Positioned.fill(child: _buildBodyBackground()),
           Column(
             children: [
-              _buildTopBar(context, user),
+              _buildTopBar(context, user, isMobile),
               Expanded(
                 child: Row(
                   children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOut,
-                      width: _sidebarOpen ? 246 : 84,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        border: Border(
-                          right: BorderSide(color: Color(0xFFD6E1EC)),
+                    if (!isMobile)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                        width: _sidebarOpen ? 246 : 84,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            right: BorderSide(color: Color(0xFFD6E1EC)),
+                          ),
                         ),
+                        clipBehavior: Clip.hardEdge,
+                        child: _buildSidebar(context, user),
                       ),
-                      clipBehavior: Clip.hardEdge,
-                      child: _buildSidebar(context, user),
-                    ),
                     Expanded(
                       child: Container(
                         color: Colors.transparent,
-                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                        padding: EdgeInsets.fromLTRB(
+                          isMobile ? 12 : 22,
+                          18,
+                          isMobile ? 12 : 22,
+                          18,
+                        ),
                         child: classroomsAsync.when(
                           data: (classrooms) =>
-                              _buildClassesArea(context, classrooms),
+                              _buildClassesArea(context, classrooms, isMobile),
                           loading: () => const Center(
                             child: CircularProgressIndicator(
                               color: Color(0xFF6E4CF5),
@@ -126,7 +142,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context, User? user) {
+  Widget _buildTopBar(BuildContext context, User? user, bool isMobile) {
     return Container(
       height: 92,
       decoration: const BoxDecoration(
@@ -138,97 +154,98 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
       ),
       child: Row(
         children: [
-          Container(
-            width: MediaQuery.of(context).size.width * 0.34,
-            height: double.infinity,
-            constraints: const BoxConstraints(minWidth: 240, maxWidth: 430),
+          Expanded(
             child: Row(
               children: [
-                const SizedBox(width: 14),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _sidebarOpen = !_sidebarOpen;
-                    });
-                  },
-                  child: const SizedBox(
-                    width: 62,
-                    height: 62,
-                    child: Icon(
+                const SizedBox(width: 8),
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(
                       Icons.menu_rounded,
                       color: Colors.white,
-                      size: 34,
+                      size: 30,
                     ),
+                    onPressed: () {
+                      if (isMobile) {
+                        Scaffold.of(context).openDrawer();
+                      } else {
+                        setState(() {
+                          _sidebarOpen = !_sidebarOpen;
+                        });
+                      }
+                    },
                   ),
                 ),
-                const SizedBox(width: 16),
-                Image.asset('assets/cite_logo.webp', height: 44),
+                const SizedBox(width: 4),
+                Image.asset('assets/cite_logo.webp', height: isMobile ? 32 : 44),
+                const SizedBox(width: 6),
+                Image.asset('assets/jmc_logo.webp', height: isMobile ? 30 : 40),
                 const SizedBox(width: 10),
-                Image.asset('assets/jmc_logo.webp', height: 40),
-                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
                         'JOSE MARIA COLLEGE',
-                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
                           fontFamily: 'OldEnglish',
                           letterSpacing: 0.5,
                         ),
                       ),
-                      Text(
-                        'Foundation, Inc.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                      if (!isMobile) ...[
+                        Text(
+                          'Foundation, Inc.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Assured • Consistent • Quality Education',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w400,
+                        Text(
+                          'Assured • Consistent • Quality Education',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF35C76F),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'STUDENT',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
+          if (!isMobile) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF35C76F),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'STUDENT',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 18),
+            const SizedBox(width: 12),
+          ],
           PopupMenuButton<String>(
             tooltip: 'Account',
             onSelected: (value) {
-              if (value == 'profile') {
-                context.push('/profile');
-              }
+              if (value == 'profile') context.push('/profile');
               if (value == 'logout') {
                 ref.read(authProvider.notifier).logout();
                 context.go('/');
@@ -251,19 +268,20 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
               ),
             ],
             child: CircleAvatar(
-              radius: 22,
+              radius: isMobile ? 18 : 22,
               backgroundColor: const Color(0xFFE7ECF3),
               child: Text(
                 (user?.name.isNotEmpty == true ? user!.name[0] : 'S')
                     .toUpperCase(),
-                style: const TextStyle(
-                  color: Color(0xFF55657F),
+                style: TextStyle(
+                  color: const Color(0xFF55657F),
+                  fontSize: isMobile ? 14 : 16,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 14),
         ],
       ),
     );
@@ -357,13 +375,16 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
     );
   }
 
-  Widget _buildClassesArea(BuildContext context, List classrooms) {
+  Widget _buildClassesArea(BuildContext context, List classrooms, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 14 : 22,
+            vertical: isMobile ? 12 : 18,
+          ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -379,8 +400,8 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
           child: Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: isMobile ? 38 : 46,
+                height: isMobile ? 38 : 46,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
@@ -389,61 +410,69 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_stories_rounded,
                   color: Colors.white,
+                  size: isMobile ? 20 : 24,
                 ),
               ),
-              const SizedBox(width: 14),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Active Classes',
-                    style: TextStyle(
-                      color: Color(0xFF6A7C97),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Active Classes',
+                      style: TextStyle(
+                        color: const Color(0xFF6A7C97),
+                        fontSize: isMobile ? 14 : 16,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Open your JMC classes or join a new one.',
-                    style: TextStyle(
-                      color: Color(0xFF8B9AB1),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Open your JMC classes or join a new one.',
+                      style: TextStyle(
+                        color: const Color(0xFF8B9AB1),
+                        fontSize: isMobile ? 11 : 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 18),
         Expanded(
-          child: Wrap(
-            spacing: 28,
-            runSpacing: 24,
-            children: [
-              for (final classroom in classrooms)
-                _buildClassCard(context, classroom),
-              _buildJoinCard(),
-            ],
+          child: SingleChildScrollView(
+            child: Wrap(
+              spacing: isMobile ? 16 : 28,
+              runSpacing: isMobile ? 16 : 24,
+              children: [
+                for (final classroom in classrooms)
+                  _buildClassCard(context, classroom, isMobile),
+                _buildJoinCard(isMobile),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildClassCard(BuildContext context, dynamic classroom) {
+  Widget _buildClassCard(BuildContext context, dynamic classroom, bool isMobile) {
     final teacherName = classroom.teacher?.name ?? 'Unknown teacher';
+    final cardWidth = isMobile
+        ? (MediaQuery.of(context).size.width - 40)
+        : 320.0;
 
     return InkWell(
       onTap: () => context.push('/classroom/${classroom.id}'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 320,
+        width: cardWidth,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -460,15 +489,15 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: 120,
-              decoration: BoxDecoration(
+              height: isMobile ? 100 : 120,
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFFFADADA),
-                    const Color(0xFFFBEAF0),
-                    const Color(0xFFE8F3FF),
+                    Color(0xFFFADADA),
+                    Color(0xFFFBEAF0),
+                    Color(0xFFE8F3FF),
                   ],
                 ),
                 borderRadius: BorderRadius.only(
@@ -477,7 +506,10 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                 ),
               ),
               child: Center(
-                child: Image.asset('assets/cite_logo.webp', height: 78),
+                child: Image.asset(
+                  'assets/cite_logo.webp',
+                  height: isMobile ? 60 : 78,
+                ),
               ),
             ),
             Padding(
@@ -491,11 +523,11 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF24364E),
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     teacherName,
                     maxLines: 1,
@@ -515,28 +547,31 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
     );
   }
 
-  Widget _buildJoinCard() {
+  Widget _buildJoinCard(bool isMobile) {
+    final cardWidth = isMobile
+        ? (MediaQuery.of(context).size.width - 40)
+        : 320.0;
+
     return InkWell(
       onTap: () => _showJoinClassroomDialog(context, ref),
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 320,
-        height: 190,
+        width: cardWidth,
+        height: isMobile ? 120 : 190,
         decoration: BoxDecoration(
           color: const Color(0xFFF3F8FD),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: const Color(0xFFCCD8E3),
             width: 4,
-            style: BorderStyle.solid,
           ),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             '+ Join class',
             style: TextStyle(
-              color: Color(0xFFAEBBCB),
-              fontSize: 18,
+              color: const Color(0xFFAEBBCB),
+              fontSize: isMobile ? 16 : 18,
               fontWeight: FontWeight.w900,
             ),
           ),
