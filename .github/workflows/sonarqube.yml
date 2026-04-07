@@ -1,0 +1,58 @@
+name: SonarQube CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Check Flutter Version
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+        working-directory: examify_flutter
+
+      - name: Analyze Flutter Code
+        run: flutter analyze
+        working-directory: examify_flutter
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: fileinfo, gd, zip
+          tools: composer
+
+      - name: Check PHP Extensions
+        run: |
+          php -v
+          php -m
+
+      - name: Install Laravel Dependencies
+        run: composer install --no-interaction --prefer-dist
+        working-directory: examify-backend
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

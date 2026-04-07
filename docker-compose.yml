@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: examify_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: examify
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: password
+      MYSQL_USER: examify_user
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # Laravel Backend (PHP-FPM)
+  backend:
+    build:
+      context: ./examify-backend
+      dockerfile: Dockerfile
+      args:
+        user: examify
+        uid: 1000
+    container_name: examify_backend
+    restart: always
+    working_dir: /var/www
+    volumes:
+      - ./examify-backend:/var/www
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: examify
+      DB_USERNAME: examify_user
+      DB_PASSWORD: password
+    depends_on:
+      - db
+
+  # Nginx for Backend
+  backend_nginx:
+    image: nginx:alpine
+    container_name: examify_backend_nginx
+    restart: always
+    ports:
+      - "8000:80"
+    volumes:
+      - ./examify-backend:/var/www
+      - ./examify-backend/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+
+  # Flutter Frontend (Nginx)
+  frontend:
+    build:
+      context: ./examify_flutter
+      dockerfile: Dockerfile
+    container_name: examify_frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend_nginx
+
+volumes:
+  db_data:
