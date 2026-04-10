@@ -18,6 +18,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      # -----------------------------
+      # FLUTTER
+      # -----------------------------
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -38,16 +41,17 @@ jobs:
 
       - name: Run Flutter Tests with Coverage
         working-directory: examify_flutter
-        run: |
-          mkdir -p coverage
-          flutter test --coverage --no-pub -r expanded || true
+        run: flutter test --coverage --no-pub -r expanded
 
-      - name: Ensure Flutter coverage file exists
+      - name: Check Flutter Coverage File
         run: |
-          if [ ! -f examify_flutter/coverage/lcov.info ]; then
-            echo "TN:" > examify_flutter/coverage/lcov.info
-          fi
+          echo "Checking Flutter coverage file..."
+          ls -la examify_flutter/coverage || true
+          test -f examify_flutter/coverage/lcov.info
 
+      # -----------------------------
+      # PHP / LARAVEL
+      # -----------------------------
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -73,24 +77,17 @@ jobs:
 
       - name: Run Laravel Tests with Coverage
         working-directory: examify-backend
-        run: |
-          vendor/bin/phpunit --coverage-clover=coverage.xml || true
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
 
-      - name: Ensure Laravel coverage file exists
+      - name: Check Laravel Coverage File
         run: |
-          if [ ! -f examify-backend/coverage.xml ]; then
-            cat > examify-backend/coverage.xml <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <coverage generated="0">
-            <project timestamp="0">
-              <file name="dummy.php">
-                <metrics loc="0" ncloc="0" classes="0" methods="0" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="0" coveredstatements="0" elements="0" coveredelements="0"/>
-              </file>
-            </project>
-          </coverage>
-          EOF
-          fi
+          echo "Checking Laravel coverage file..."
+          ls -la examify-backend || true
+          test -f examify-backend/coverage.xml
 
+      # -----------------------------
+      # SONAR
+      # -----------------------------
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
