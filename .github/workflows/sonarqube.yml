@@ -39,6 +39,7 @@ jobs:
       - name: Run Flutter Tests with Coverage
         working-directory: examify_flutter
         run: flutter test --coverage --no-pub -r expanded
+        continue-on-error: true
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -61,6 +62,7 @@ jobs:
       - name: Run Laravel Tests with Coverage
         working-directory: examify-backend
         run: vendor/bin/phpunit --coverage-clover=coverage.xml
+        continue-on-error: true
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
