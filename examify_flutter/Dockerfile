@@ -1,13 +1,13 @@
 # Stage 1: Build the Flutter Web app
-FROM instrumentisto/flutter:3.16 AS build
+FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 # Set working directory
 WORKDIR /app
 
-# Copy the pubspec and other necessary files
+# Copy pubspec files first for better caching
 COPY pubspec.yaml pubspec.lock ./
 
-# Get the dependencies
+# Get dependencies
 RUN flutter pub get
 
 # Copy the rest of the application
@@ -19,7 +19,7 @@ RUN flutter build web --release
 # Stage 2: Serve the app with Nginx
 FROM nginx:alpine
 
-# Copy the build output from the previous stage
+# Copy the build output
 COPY --from=build /app/build/web /usr/share/nginx/html
 
 # Expose port 80
