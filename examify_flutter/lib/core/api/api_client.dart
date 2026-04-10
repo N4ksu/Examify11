@@ -22,7 +22,6 @@ const String apiBaseUrl = String.fromEnvironment(
 );
 
 final apiClientProvider = Provider<Dio>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
 
   final dio = Dio(
     BaseOptions(
@@ -36,7 +35,7 @@ final apiClientProvider = Provider<Dio>((ref) {
     ),
   );
 
-  dio.interceptors.add(TokenInterceptor(dio: dio, prefs: prefs));
+  dio.interceptors.add(TokenInterceptor(dio: dio));
   dio.interceptors.add(ErrorInterceptor());
   dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
 

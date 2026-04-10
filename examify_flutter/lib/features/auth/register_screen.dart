@@ -34,10 +34,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted) return;
 
       if (success) {
-        if (_role == 'teacher') {
-          context.go('/teacher');
-        } else {
-          context.go('/student');
+        if (mounted) {
+          context.go('/?registered=true');
         }
       }
     }
@@ -99,128 +97,124 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Colors.black, width: 1.6),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textSelectionTheme: const TextSelectionThemeData(
+          selectionColor: Colors.transparent,
+        ),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          Container(
-            width: 28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.black, size: 16),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        validator: validator,
+        cursorColor: Colors.black,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: hint,
+          hintStyle: const TextStyle(
+            color: Color(0xFF555555),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(width: 8),
-          Container(width: 1.2, height: 24, color: Colors.black),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                textSelectionTheme: const TextSelectionThemeData(
-                  selectionColor: Colors.transparent,
-                ),
-              ),
-              child: TextFormField(
-                controller: controller,
-                obscureText: obscureText,
-                keyboardType: keyboardType,
-                validator: validator,
-                cursorColor: Colors.black,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: hint,
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF555555),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  border: InputBorder.none,
-                  filled: true,
-                  fillColor: Colors.white,
-                  focusedBorder: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          prefixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(width: 12),
+              Icon(icon, color: Colors.black, size: 16),
+              const SizedBox(width: 8),
+              Container(width: 1.2, height: 24, color: Colors.black),
+              const SizedBox(width: 12),
+            ],
           ),
-          if (trailing != null)
-            Padding(padding: const EdgeInsets.only(right: 4), child: trailing),
-          const SizedBox(width: 4),
-        ],
+          suffixIcon: trailing,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.black, width: 1.6),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.black, width: 1.6),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.black, width: 1.6),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.red, width: 1.6),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.red, width: 1.6),
+          ),
+          errorStyle: const TextStyle(
+            color: Color(0xFFFF2E2E), // Bright red from JMC logo that pops on blur
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }
 
   Widget buildRoleDropdown() {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Colors.black, width: 1.6),
+    return DropdownButtonFormField<String>(
+      initialValue: _role,
+      icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
+      dropdownColor: Colors.white,
+      style: const TextStyle(
+        color: Colors.black,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          Container(
-            width: 28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.school, color: Colors.black, size: 16),
-          ),
-          const SizedBox(width: 8),
-          Container(width: 1.2, height: 24, color: Colors.black),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: _role,
-              isDense: true,
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
-              dropdownColor: Colors.white,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                filled: true,
-                fillColor: Colors.white,
-                focusedBorder: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'student', child: Text('Student')),
-                DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
-              ],
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _role = val);
-                }
-              },
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        prefixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(width: 12),
+            const Icon(Icons.school, color: Colors.black, size: 16),
+            const SizedBox(width: 8),
+            Container(width: 1.2, height: 24, color: Colors.black),
+            const SizedBox(width: 12),
+          ],
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: const BorderSide(color: Colors.black, width: 1.6),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: const BorderSide(color: Colors.black, width: 1.6),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: const BorderSide(color: Colors.black, width: 1.6),
+        ),
       ),
+      items: const [
+        DropdownMenuItem(value: 'student', child: Text('Student')),
+        DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
+      ],
+      onChanged: (val) {
+        if (val != null) {
+          setState(() => _role = val);
+        }
+      },
     );
   }
 
@@ -356,7 +350,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             icon: Icons.person,
                             hint: 'Username',
                             validator: (v) =>
-                                v == null || v.isEmpty ? 'Enter name' : null,
+                                v == null || v.trim().isEmpty ? 'Enter name' : null,
                           ),
                           const SizedBox(height: 12),
                           buildField(
@@ -364,8 +358,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             icon: Icons.email,
                             hint: 'Email',
                             keyboardType: TextInputType.emailAddress,
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Enter email' : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Enter email';
+                              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                              if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email';
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 12),
                           buildField(
@@ -389,9 +387,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 size: 16,
                               ),
                             ),
-                            validator: (v) => v == null || v.isEmpty
-                                ? 'Enter password'
-                                : null,
+                            validator: (v) {
+                                if (v == null || v.trim().isEmpty) return 'Enter password';
+                                if (v.trim().length < 8) return 'Make it at least 8 characters';
+                                return null;
+                            },
                           ),
                           const SizedBox(height: 12),
                           buildRoleDropdown(),

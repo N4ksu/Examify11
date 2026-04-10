@@ -156,10 +156,7 @@ class ProfileScreen extends ConsumerWidget {
                             width: double.infinity,
                             child: AppButton(
                               text: 'Logout',
-                              onPressed: () {
-                                ref.read(authProvider.notifier).logout();
-                                context.go('/');
-                              },
+                              onPressed: () => _confirmLogout(context, ref),
                               isSecondary: true,
                             ),
                           ),
@@ -203,5 +200,62 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF6E4CF5), width: 2),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFF6E4CF5)),
+            SizedBox(width: 8),
+            Text(
+              'Confirm Log Out',
+              style: TextStyle(
+                color: Color(0xFF6E4CF5),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to log out of your account?',
+          style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF5F6D84), fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF3EDFF),
+              foregroundColor: const Color(0xFF5A285A), // Dark text instead of white!
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: Color(0xFF6E4CF5), width: 1.5),
+              ),
+            ),
+            child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      ref.read(authProvider.notifier).logout();
+      context.go('/');
+    }
   }
 }

@@ -65,26 +65,33 @@ void main() async {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  // Selectively watch only auth status to prevent destructive router rebuilds
+  // whenever temporary variables like `isLoading` toggle during requests.
+  final isAuthenticated = ref.watch(authProvider.select((state) => state.isAuthenticated));
+  final userRole = ref.watch(authProvider.select((state) => state.user?.role.name));
 
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
-      final isAuth = authState.isAuthenticated;
       final isAuthRoute =
           state.uri.path == '/' || state.uri.path == '/register';
 
-      if (!isAuth && !isAuthRoute) return '/';
+      if (!isAuthenticated && !isAuthRoute) return '/';
 
-      if (isAuth && isAuthRoute) {
-        final role = authState.user?.role.name;
-        return role == 'teacher' ? '/teacher' : '/student';
+      if (isAuthenticated && isAuthRoute) {
+        return userRole == 'teacher' ? '/teacher' : '/student';
       }
 
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/',
+        builder: (context, state) {
+          final registered = state.uri.queryParameters['registered'] == 'true';
+          return LoginScreen(registered: registered);
+        },
+      ),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),

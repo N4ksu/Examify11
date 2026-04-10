@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../models/user.dart';
 
@@ -31,23 +34,25 @@ class AuthState {
 }
 
 class AuthNotifier extends Notifier<AuthState> {
+  final _storage = const FlutterSecureStorage();
+
   @override
   AuthState build() {
-    // Schedule load user after build
     Future.microtask(() => _loadUser());
     return AuthState();
   }
 
   Future<void> _loadUser() async {
     state = state.copyWith(isLoading: true);
-    final prefs = ref.read(sharedPreferencesProvider);
-    final token = prefs.getString('access_token');
+    
+    final token = await _storage.read(key: 'access_token');
 
     if (token != null) {
       try {
-        final userJsonStr = prefs.getString('user_data');
+        final userJsonStr = await _storage.read(key: 'user_data');
         if (userJsonStr != null) {
-          // ...
+           final user = User.fromJson(jsonDecode(userJsonStr));
+           state = state.copyWith(user: user);
         }
       } catch (e) {
         // failed to load user
@@ -56,70 +61,49 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: false);
   }
 
-  // ─── MOCK CREDENTIALS (remove when backend is ready) ─────────────────────
-  static const _mockAccounts = [
-    {
-      'email': 'teacher@examify.dev',
-      'password': 'password',
-      'id': 1,
-      'name': 'Demo Teacher',
-      'role': 'teacher',
-    },
-    {
-      'email': 'student@examify.dev',
-      'password': 'password',
-      'id': 2,
-      'name': 'Demo Student',
-      'role': 'student',
-    },
-  ];
-  // ──────────────────────────────────────────────────────────────────────────
-
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, bool remember) async {
     state = state.copyWith(isLoading: true, clearError: true);
-
-    // --- Mock bypass ---
-    final mock = _mockAccounts.firstWhere(
-      (a) => a['email'] == email && a['password'] == password,
-      orElse: () => {},
-    );
-    if (mock.isNotEmpty) {
-      await Future.delayed(
-        const Duration(milliseconds: 400),
-      ); // simulate latency
-      final prefs = ref.read(sharedPreferencesProvider);
-      await prefs.setString('access_token', 'mock_token_${mock['id']}');
-      final user = User.fromJson(mock);
-      state = state.copyWith(isLoading: false, user: user);
-      return true;
-    }
-    // --- End mock bypass ---
 
     try {
       final dio = ref.read(apiClientProvider);
       final response = await dio.post(
         '/login',
-        data: {'email': email, 'password': password},
+        data: {'email': email, 'password': password, 'remember_me': remember},
       );
 
       final data = response.data;
-      final prefs = ref.read(sharedPreferencesProvider);
-      await prefs.setString('access_token', data['access_token']);
+      await _storage.write(key: 'access_token', value: data['access_token']);
       if (data['refresh_token'] != null) {
-        await prefs.setString('refresh_token', data['refresh_token']);
+        await _storage.write(key: 'refresh_token', value: data['refresh_token']);
       }
       if (data['expires_at'] != null) {
-        await prefs.setString('expires_at', data['expires_at']);
+        await _storage.write(key: 'expires_at', value: data['expires_at']);
       }
 
       final user = User.fromJson(data['user']);
+      await _storage.write(key: 'user_data', value: jsonEncode(data['user']));
+
       state = state.copyWith(isLoading: false, user: user);
       return true;
+    } on DioException catch (e) {
+      String errorMessage = 'Failed to login. Please try again.';
+      if (e.response != null) {
+        if (e.response!.statusCode == 401) {
+          errorMessage = 'Invalid email or password.';
+        } else if (e.response!.statusCode == 422) {
+          errorMessage = 'Validation error. Please check your inputs.';
+        } else if (e.response!.statusCode == 429) {
+          errorMessage = 'Too many attempts. Please try again later.';
+        } else if (e.response!.statusCode! >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      } else {
+         errorMessage = 'Network error. Please check your connection.';
+      }
+      state = state.copyWith(isLoading: false, error: errorMessage);
+      return false;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to login. Please check credentials.',
-      );
+      state = state.copyWith(isLoading: false, error: 'An unexpected error occurred.');
       return false;
     }
   }
@@ -133,7 +117,7 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final dio = ref.read(apiClientProvider);
-      final response = await dio.post(
+      await dio.post(
         '/register',
         data: {
           'name': name,
@@ -143,28 +127,39 @@ class AuthNotifier extends Notifier<AuthState> {
         },
       );
 
-      final data = response.data;
-      final prefs = ref.read(sharedPreferencesProvider);
-      await prefs.setString('access_token', data['access_token']);
-      if (data['expires_at'] != null) {
-        await prefs.setString('expires_at', data['expires_at']);
-      }
-
-      final user = User.fromJson(data['user']);
-
-      state = state.copyWith(isLoading: false, user: user);
+      state = state.copyWith(isLoading: false);
       return true;
+    } on DioException catch (e) {
+      String errorMessage = 'Failed to register. Please try again.';
+      if (e.response != null) {
+        if (e.response!.statusCode == 422) {
+          final data = e.response!.data;
+          if (data is Map && data['errors'] != null && (data['errors'] as Map).isNotEmpty) {
+            errorMessage = (data['errors'] as Map).values.first[0].toString();
+          } else if (data is Map && data['message'] != null) {
+            errorMessage = data['message'].toString();
+          } else {
+             errorMessage = 'Validation error. Please check your inputs.';
+          }
+        } else if (e.response!.statusCode! >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      } else {
+         errorMessage = 'Network error. Please check your connection.';
+      }
+      state = state.copyWith(isLoading: false, error: errorMessage);
+      return false;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Failed to register.');
+      state = state.copyWith(isLoading: false, error: 'An unexpected error occurred.');
       return false;
     }
   }
 
   Future<void> logout() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('expires_at');
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: 'expires_at');
+    await _storage.delete(key: 'user_data');
     state = state.copyWith(clearUser: true, isLoading: false, clearError: true);
   }
 }

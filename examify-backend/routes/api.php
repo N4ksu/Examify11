@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\RetakeRequestController;
 
 // Public Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1'); // 5 requests per minute
 Route::post('/token/refresh', [AuthController::class, 'refresh'])
     ->middleware('throttle:10,1'); // 10 requests per minute
 

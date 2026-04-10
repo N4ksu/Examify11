@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenInterceptor extends Interceptor {
   final Dio dio;
-  final SharedPreferences prefs;
+  final storage = const FlutterSecureStorage();
 
-  TokenInterceptor({required this.dio, required this.prefs});
+  TokenInterceptor({required this.dio});
 
   @override
   void onRequest(
@@ -16,8 +16,8 @@ class TokenInterceptor extends Interceptor {
     if (!options.path.contains('/login') &&
         !options.path.contains('/register') &&
         !options.path.contains('/token/refresh')) {
-      final String? accessToken = prefs.getString('access_token');
-      final String? expiresAtStr = prefs.getString('expires_at');
+      final String? accessToken = await storage.read(key: 'access_token');
+      final String? expiresAtStr = await storage.read(key: 'expires_at');
 
       if (accessToken != null && expiresAtStr != null) {
         final expiresAt = DateTime.parse(expiresAtStr);
@@ -34,7 +34,7 @@ class TokenInterceptor extends Interceptor {
       }
 
       // Re-read token in case it was refreshed
-      final currentToken = prefs.getString('access_token');
+      final currentToken = await storage.read(key: 'access_token');
       if (currentToken != null) {
         options.headers['Authorization'] = 'Bearer $currentToken';
       }
@@ -44,7 +44,7 @@ class TokenInterceptor extends Interceptor {
   }
 
   Future<bool> _refreshToken() async {
-    final refreshToken = prefs.getString('refresh_token');
+    final refreshToken = await storage.read(key: 'refresh_token');
     if (refreshToken == null) return false;
 
     try {
@@ -68,11 +68,11 @@ class TokenInterceptor extends Interceptor {
 
       if (response.statusCode == 200) {
         final data = response.data;
-        await prefs.setString('access_token', data['access_token']);
+        await storage.write(key: 'access_token', value: data['access_token']);
         if (data['refresh_token'] != null) {
-          await prefs.setString('refresh_token', data['refresh_token']);
+          await storage.write(key: 'refresh_token', value: data['refresh_token']);
         }
-        await prefs.setString('expires_at', data['expires_at']);
+        await storage.write(key: 'expires_at', value: data['expires_at']);
         return true;
       }
     } catch (e) {
@@ -82,9 +82,9 @@ class TokenInterceptor extends Interceptor {
   }
 
   Future<void> _clearTokens() async {
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('expires_at');
+    await storage.delete(key: 'access_token');
+    await storage.delete(key: 'refresh_token');
+    await storage.delete(key: 'expires_at');
   }
 
   @override

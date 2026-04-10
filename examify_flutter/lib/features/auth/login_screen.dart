@@ -6,7 +6,8 @@ import '../../shared/providers/auth_provider.dart';
 import '../../shared/models/user.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final bool registered;
+  const LoginScreen({super.key, this.registered = false});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -20,11 +21,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool remember = true;
   bool hidePassword = true;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.registered) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF6E4CF5), width: 2),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Color(0xFF35C76F)),
+                SizedBox(width: 8),
+                Text(
+                  'Success',
+                  style: TextStyle(color: Color(0xFF35C76F), fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Your account has been created successfully. Please log in to continue.',
+              style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6E4CF5),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      });
+    }
+  }
+
   void _login() async {
     if (_formKey.currentState!.validate()) {
       final success = await ref
           .read(authProvider.notifier)
-          .login(_emailController.text, _passwordController.text);
+          .login(_emailController.text.trim(), _passwordController.text, remember);
 
       if (!mounted) return;
 
@@ -94,68 +141,72 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Colors.black, width: 1.6),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textSelectionTheme: const TextSelectionThemeData(
+          selectionColor: Colors.transparent,
+        ),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          Container(
-            width: 28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.black, size: 16),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        validator: validator,
+        cursorColor: Colors.black,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: hint,
+          hintStyle: const TextStyle(
+            color: Color(0xFF555555),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(width: 8),
-          Container(width: 1.2, height: 24, color: Colors.black),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                textSelectionTheme: const TextSelectionThemeData(
-                  selectionColor: Colors.transparent,
-                ),
-              ),
-              child: TextFormField(
-                controller: controller,
-                obscureText: obscureText,
-                keyboardType: keyboardType,
-                validator: validator,
-                cursorColor: Colors.black,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: hint,
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF555555),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  border: InputBorder.none,
-                  filled: true,
-                  fillColor: Colors.white,
-                  focusedBorder: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          prefixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(width: 12),
+              Icon(icon, color: Colors.black, size: 16),
+              const SizedBox(width: 8),
+              Container(width: 1.2, height: 24, color: Colors.black),
+              const SizedBox(width: 12),
+            ],
           ),
-          if (trailing != null)
-            Padding(padding: const EdgeInsets.only(right: 4), child: trailing),
-          const SizedBox(width: 4),
-        ],
+          suffixIcon: trailing,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.black, width: 1.6),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.black, width: 1.6),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.black, width: 1.6),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.red, width: 1.6),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Colors.red, width: 1.6),
+          ),
+          errorStyle: const TextStyle(
+            color: Color(0xFFFF2E2E), // Bright red from JMC logo that pops on blur
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     );
   }
@@ -297,8 +348,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             icon: Icons.person,
                             hint: 'Email',
                             keyboardType: TextInputType.emailAddress,
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Enter email' : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Enter email';
+                              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                              if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email';
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 12),
 
@@ -323,7 +378,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 size: 16,
                               ),
                             ),
-                            validator: (v) => v == null || v.isEmpty
+                            validator: (v) => v == null || v.trim().isEmpty
                                 ? 'Enter password'
                                 : null,
                           ),

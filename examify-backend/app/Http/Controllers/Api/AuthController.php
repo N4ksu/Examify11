@@ -39,18 +39,9 @@ class AuthController extends Controller
             'student_id' => $uniqueId,
         ]);
 
-        $expiresAt = now()->addMinutes(60);
-        $token = $user->createToken('auth_token', ['*'], $expiresAt);
-        $refreshToken = Str::random(64);
-
-        $token->accessToken->refresh_token = $refreshToken;
-        $token->accessToken->save();
-
         return response()->json([
+            'message' => 'Registered successfully. Please log in.',
             'user' => $user,
-            'access_token' => $token->plainTextToken,
-            'refresh_token' => $refreshToken,
-            'expires_at' => $expiresAt->toIso8601String(),
         ], 201);
     }
 
@@ -59,18 +50,27 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
+            'remember_me' => 'boolean|nullable',
         ]);
 
-        if (!Auth::attempt($validated)) {
+        $credentials = [
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+        ];
+
+        if (!Auth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
         $user = User::where('email', $validated['email'])->firstOrFail();
 
-        // Revoke all previous tokens
-        $user->tokens()->delete();
+        // Optional: Remove only tokens that have expired (optional housekeeping)
+        // $user->tokens()->where('expires_at', '<', now())->delete();
 
-        $expiresAt = now()->addMinutes(60);
+        // If "remember_me" is passed and true, token expires in 30 days. Otherwise 60 minutes.
+        $remember = $validated['remember_me'] ?? false;
+        $expiresAt = $remember ? now()->addDays(30) : now()->addMinutes(60);
+        
         $token = $user->createToken('auth_token', ['*'], $expiresAt);
         $refreshToken = Str::random(64);
 
