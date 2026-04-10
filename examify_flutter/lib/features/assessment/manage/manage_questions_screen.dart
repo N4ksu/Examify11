@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/models/question.dart';
 import '../../../shared/providers/assessment_provider.dart';
 import '../../../core/api/api_client.dart';
-import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/wizard_bottom_nav.dart';
 
 class ManageQuestionsScreen extends ConsumerStatefulWidget {
@@ -401,87 +400,216 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.question == null ? 'Add Question' : 'Edit Question'),
-      content: SizedBox(
-        width: 500,
-        child: SingleChildScrollView(
-          child: Form(
+    return Theme(
+      data: ThemeData.light().copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6E4CF5),
+          primary: const Color(0xFF6E4CF5),
+          surface: Colors.white,
+        ),
+        textTheme: Theme.of(context).textTheme.apply(
+          bodyColor: const Color(0xFF1E293B),
+          displayColor: const Color(0xFF1E293B),
+        ),
+      ),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6E4CF5).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.add_circle_outline,
+                color: Color(0xFF6E4CF5),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              widget.question == null ? 'Add Question' : 'Edit Question',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 600,
+          child: SingleChildScrollView(
+            child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppTextField(
-                  label: 'Question Body',
-                  controller: _bodyController,
-                  validator: (val) => val == null || val.trim().isEmpty
-                      ? 'Please enter the question text'
-                      : null,
-                ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'multiple_choice',
-                    child: Text('Multiple Choice'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'multiple_select',
-                    child: Text('Multiple Select'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'true_false',
-                    child: Text('True/False'),
-                  ),
-                  DropdownMenuItem(value: 'essay', child: Text('Essay')),
-                ],
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _type = val;
-                      _resetOptions();
-                    });
-                  }
-                },
-              ),
-              if (_type == 'multiple_select') ...[
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _scoringMethod,
-                  decoration: const InputDecoration(labelText: 'Scoring Method'),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'exact',
-                      child: Text('Exact Match (all correct required)'),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Question Body',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF94A3B8),
+                      ),
                     ),
-                    DropdownMenuItem(
-                      value: 'partial',
-                      child: Text('Partial Credit (points per correct)'),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _bodyController,
+                      maxLines: 2,
+                      style: const TextStyle(color: Color(0xFF1E293B)),
+                      decoration: InputDecoration(
+                        hintText: 'Enter your question here...',
+                        filled: true,
+                        fillColor: const Color(0xFF6E4CF5).withOpacity(0.03),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: Color(0xFF6E4CF5), width: 1.5),
+                        ),
+                      ),
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? 'Please enter the question text'
+                          : null,
                     ),
                   ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        _scoringMethod = val;
-                      });
-                    }
-                  },
                 ),
-              ],
-              const SizedBox(height: 16),
-              AppTextField(
-                label: 'Points',
-                controller: _pointsController,
-                keyboardType: TextInputType.number,
-                validator: (val) {
-                  if (val == null || val.isEmpty) return 'Enter points';
-                  final pts = int.tryParse(val);
-                  if (pts == null || pts < 1) return 'Must be a positive number';
-                  return null;
-                },
-              ),
+                const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Question Type',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _type,
+                      style: const TextStyle(color: Color(0xFF1E293B), fontSize: 16),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFF6E4CF5).withOpacity(0.03),
+                        prefixIcon: const Icon(Icons.category_outlined, size: 20, color: Color(0xFF6E4CF5)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: Color(0xFF6E4CF5), width: 1.5),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'multiple_choice', child: Text('Multiple Choice')),
+                        DropdownMenuItem(value: 'multiple_select', child: Text('Multiple Select')),
+                        DropdownMenuItem(value: 'true_false', child: Text('True/False')),
+                        DropdownMenuItem(value: 'essay', child: Text('Essay')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _type = val;
+                            _resetOptions();
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                if (_type == 'multiple_select') ...[
+                  const SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Scoring Method',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _scoringMethod,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFF6E4CF5).withOpacity(0.03),
+                          prefixIcon: const Icon(Icons.score_outlined, size: 20, color: Color(0xFF6E4CF5)),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: Color(0xFF6E4CF5), width: 1.5),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'exact', child: Text('Exact Match')),
+                          DropdownMenuItem(value: 'partial', child: Text('Partial Credit')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setState(() => _scoringMethod = val);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Points',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _pointsController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Color(0xFF1E293B)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFF6E4CF5).withOpacity(0.03),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: const BorderSide(color: Color(0xFF6E4CF5), width: 1.5),
+                        ),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) return 'Enter points';
+                        final pts = int.tryParse(val);
+                        if (pts == null || pts < 1) return 'Must be a positive number';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
               if (_type != 'essay') ...[
                 const SizedBox(height: 24),
                 Row(
@@ -489,27 +617,65 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
                   children: [
                     const Text(
                       'Options',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
                     ),
                     if (_type == 'multiple_choice' || _type == 'multiple_select')
-                      TextButton.icon(
-                        onPressed: () => setState(
+                      InkWell(
+                        onTap: () => setState(
                           () => _options.add({'body': '', 'is_correct': false}),
                         ),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Option'),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6E4CF5).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.add, size: 16, color: Color(0xFF6E4CF5)),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Add Option',
+                                style: TextStyle(
+                                  color: Color(0xFF6E4CF5),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                   ],
                 ),
                 ...List.generate(_options.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
+                  final isCorrect = _options[index]['is_correct'];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isCorrect ? const Color(0xFF6E4CF5).withOpacity(0.05) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isCorrect ? const Color(0xFF6E4CF5) : const Color(0xFFE2E8F0),
+                        width: isCorrect ? 1.5 : 1,
+                      ),
+                    ),
                     child: Row(
                       children: [
                         if (_type == 'multiple_select')
                           Checkbox(
-                            value: _options[index]['is_correct'],
+                            value: isCorrect,
                             activeColor: const Color(0xFF6E4CF5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                             onChanged: (val) {
                               setState(() {
                                 _options[index]['is_correct'] = val ?? false;
@@ -519,7 +685,7 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
                         else
                           Radio<int>(
                             value: index,
-                            activeColor: const Color(0xFF6E4CF5), // Violet Radio
+                            activeColor: const Color(0xFF6E4CF5),
                             groupValue: _options.indexWhere(
                               (o) => o['is_correct'] == true,
                             ),
@@ -535,8 +701,14 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
                         Expanded(
                           child: TextFormField(
                             initialValue: _options[index]['body'],
+                            style: const TextStyle(color: Color(0xFF1E293B), fontSize: 15),
                             decoration: InputDecoration(
                               hintText: 'Option ${index + 1}',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                             ),
                             onChanged: (val) => _options[index]['body'] = val,
                             validator: (val) => val == null || val.trim().isEmpty
@@ -546,10 +718,13 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
                         ),
                         if ((_type == 'multiple_choice' || _type == 'multiple_select') &&
                             _options.length > 2)
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () =>
-                                setState(() => _options.removeAt(index)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFEF4444), size: 20),
+                              onPressed: () =>
+                                  setState(() => _options.removeAt(index)),
+                            ),
                           ),
                       ],
                     ),
@@ -561,32 +736,54 @@ class _QuestionDialogState extends ConsumerState<QuestionDialog> {
         ),
       ),
     ),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _save,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6E4CF5),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Color(0xFF1E293B),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
             ),
-          ),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(width: 16),
+            ElevatedButton(
+              onPressed: _isSaving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6E4CF5),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
+                shape: const StadiumBorder(),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Save Question',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+            ),
+          ],
         ),
       ],
+    ),
     );
   }
 }
