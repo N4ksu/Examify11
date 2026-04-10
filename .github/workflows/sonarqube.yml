@@ -10,7 +10,7 @@ on:
 jobs:
   sonarqube:
     name: SonarQube Analysis
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
@@ -29,18 +29,23 @@ jobs:
           dart --version
 
       - name: Install Flutter Dependencies
-        run: flutter pub get
         working-directory: examify_flutter
+        run: flutter pub get
 
       - name: Analyze Flutter Code
-        run: flutter analyze
         working-directory: examify_flutter
+        run: flutter analyze
+
+      - name: Run Flutter Tests with Coverage
+        working-directory: examify_flutter
+        run: flutter test --coverage
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           extensions: fileinfo, gd, zip
+          coverage: xdebug
           tools: composer
 
       - name: Check PHP Extensions
@@ -49,8 +54,18 @@ jobs:
           php -m
 
       - name: Install Laravel Dependencies
-        run: composer install --no-interaction --prefer-dist
         working-directory: examify-backend
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare Laravel Environment
+        working-directory: examify-backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run Laravel Tests with Coverage
+        working-directory: examify-backend
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
