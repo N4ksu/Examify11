@@ -38,7 +38,7 @@ jobs:
 
       - name: Run Flutter Tests with Coverage
         working-directory: examify_flutter
-        run: flutter test --coverage
+        run: flutter test --coverage --no-pub -r expanded
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -47,11 +47,6 @@ jobs:
           extensions: fileinfo, gd, zip
           coverage: xdebug
           tools: composer
-
-      - name: Check PHP Extensions
-        run: |
-          php -v
-          php -m
 
       - name: Install Laravel Dependencies
         working-directory: examify-backend
