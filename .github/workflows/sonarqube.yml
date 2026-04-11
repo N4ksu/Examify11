@@ -18,6 +18,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      # -----------------------------
+      # FLUTTER
+      # -----------------------------
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -48,6 +51,19 @@ jobs:
           fi
         continue-on-error: true
 
+      - name: Check Flutter Coverage File
+        run: |
+          echo "Checking Flutter coverage file..."
+          mkdir -p examify_flutter/coverage
+          if [ ! -f examify_flutter/coverage/lcov.info ]; then
+            echo "TN:" > examify_flutter/coverage/lcov.info
+          fi
+          ls -la examify_flutter/coverage
+        continue-on-error: true
+
+      # -----------------------------
+      # PHP / LARAVEL
+      # -----------------------------
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -91,6 +107,27 @@ jobs:
           fi
         continue-on-error: true
 
+      - name: Check Laravel Coverage File
+        run: |
+          echo "Checking Laravel coverage file..."
+          if [ ! -f examify-backend/coverage.xml ]; then
+            cat > examify-backend/coverage.xml <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <coverage generated="0">
+            <project timestamp="0">
+              <file name="dummy.php">
+                <metrics loc="0" ncloc="0" classes="0" methods="0" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="0" coveredstatements="0" elements="0" coveredelements="0"/>
+              </file>
+            </project>
+          </coverage>
+          EOF
+          fi
+          ls -la examify-backend
+        continue-on-error: true
+
+      # -----------------------------
+      # SONAR
+      # -----------------------------
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
