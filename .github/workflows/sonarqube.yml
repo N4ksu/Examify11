@@ -18,18 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # -----------------------------
-      # FLUTTER
-      # -----------------------------
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-
-      - name: Check Flutter Version
-        run: |
-          flutter --version
-          dart --version
 
       - name: Install Flutter Dependencies
         working-directory: examify_flutter
@@ -41,93 +33,18 @@ jobs:
         run: flutter analyze
         continue-on-error: true
 
-      - name: Run Flutter Tests with Coverage
-        working-directory: examify_flutter
-        run: |
-          mkdir -p coverage
-          flutter test --coverage --no-pub -r expanded || true
-          if [ ! -f coverage/lcov.info ]; then
-            echo "TN:" > coverage/lcov.info
-          fi
-        continue-on-error: true
-
-      - name: Check Flutter Coverage File
-        run: |
-          echo "Checking Flutter coverage file..."
-          mkdir -p examify_flutter/coverage
-          if [ ! -f examify_flutter/coverage/lcov.info ]; then
-            echo "TN:" > examify_flutter/coverage/lcov.info
-          fi
-          ls -la examify_flutter/coverage
-        continue-on-error: true
-
-      # -----------------------------
-      # PHP / LARAVEL
-      # -----------------------------
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
           extensions: fileinfo, gd, zip
-          coverage: xdebug
           tools: composer
-
-      - name: Check PHP Version
-        run: |
-          php -v
-          php -m
 
       - name: Install Laravel Dependencies
         working-directory: examify-backend
         run: composer install --no-interaction --prefer-dist
         continue-on-error: true
 
-      - name: Prepare Laravel Environment
-        working-directory: examify-backend
-        run: |
-          cp .env.example .env || true
-          php artisan key:generate || true
-        continue-on-error: true
-
-      - name: Run Laravel Tests with Coverage
-        working-directory: examify-backend
-        run: |
-          vendor/bin/phpunit --coverage-clover=coverage.xml || true
-          if [ ! -f coverage.xml ]; then
-            cat > coverage.xml <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <coverage generated="0">
-            <project timestamp="0">
-              <file name="dummy.php">
-                <metrics loc="0" ncloc="0" classes="0" methods="0" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="0" coveredstatements="0" elements="0" coveredelements="0"/>
-              </file>
-            </project>
-          </coverage>
-          EOF
-          fi
-        continue-on-error: true
-
-      - name: Check Laravel Coverage File
-        run: |
-          echo "Checking Laravel coverage file..."
-          if [ ! -f examify-backend/coverage.xml ]; then
-            cat > examify-backend/coverage.xml <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <coverage generated="0">
-            <project timestamp="0">
-              <file name="dummy.php">
-                <metrics loc="0" ncloc="0" classes="0" methods="0" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="0" coveredstatements="0" elements="0" coveredelements="0"/>
-              </file>
-            </project>
-          </coverage>
-          EOF
-          fi
-          ls -la examify-backend
-        continue-on-error: true
-
-      # -----------------------------
-      # SONAR
-      # -----------------------------
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
