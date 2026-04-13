@@ -74,7 +74,8 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token', ['*'], $expiresAt);
         $refreshToken = Str::random(64);
 
-        $token->accessToken->refresh_token = $refreshToken;
+        // Store hashed version in DB, return plain version once
+        $token->accessToken->refresh_token = hash('sha256', $refreshToken);
         $token->accessToken->save();
 
         return response()->json([
@@ -91,8 +92,9 @@ class AuthController extends Controller
             'refresh_token' => 'required|string',
         ]);
 
+        // Look up by hashed refresh token
         $accessToken = DB::table('personal_access_tokens')
-            ->where('refresh_token', $validated['refresh_token'])
+            ->where('refresh_token', hash('sha256', $validated['refresh_token']))
             ->first();
 
         if (!$accessToken) {
@@ -108,7 +110,8 @@ class AuthController extends Controller
         $newToken = $user->createToken('auth_token', ['*'], $expiresAt);
         $newRefreshToken = Str::random(64);
 
-        $newToken->accessToken->refresh_token = $newRefreshToken;
+        // Store hashed version
+        $newToken->accessToken->refresh_token = hash('sha256', $newRefreshToken);
         $newToken->accessToken->save();
 
         return response()->json([

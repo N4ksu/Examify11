@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'token_interceptor.dart';
 import 'error_interceptor.dart';
+import '../../shared/providers/auth_provider.dart';
 
 // Provides the SharedPreferences instance synchronously (requires override in main.dart)
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -11,32 +13,35 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   );
 });
 
-const String apiBaseUrl = String.fromEnvironment(
-  'API_URL',
-  defaultValue: 'https://examify11.onrender.com/api',
-);
-
-// const String apiBaseUrl = String.fromEnvironment(
-//   'API_URL',
-//   defaultValue: 'http://localhost:8000/api/',
-// );
-
 final apiClientProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 90),
+      baseUrl: 'http://localhost:8000/api', // Update with your actual API URL
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
       headers: {
-        'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
     ),
   );
 
-  dio.interceptors.add(TokenInterceptor(dio: dio));
-  dio.interceptors.add(ErrorInterceptor());
-  dio.interceptors.add(LogInterceptor(responseBody: true, requestBody: true));
+  final authNotifier = ref.read(authProvider.notifier);
+
+  dio.interceptors.addAll([
+    TokenInterceptor(
+      dio: dio,
+      onUnauthorized: () => authNotifier.forceLogout(),
+    ),
+    ErrorInterceptor(),
+    if (kDebugMode)
+      LogInterceptor(
+        requestHeader: true,
+        requestBody: true,
+        responseHeader: true,
+        responseBody: true,
+      ),
+  ]);
 
   return dio;
 });

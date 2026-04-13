@@ -82,6 +82,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         return userRole == 'teacher' ? '/teacher' : '/student';
       }
 
+      // Role-based protection: Prevent students from accessing teacher routes and vice versa
+      if (isAuthenticated) {
+        if (state.uri.path.startsWith('/teacher') && userRole != 'teacher') {
+          return '/student';
+        }
+        if (state.uri.path.startsWith('/student') && userRole != 'teacher') {
+            // Note: If you are not a teacher, you stay in student routes. 
+            // We could be more strict, but this handles the reported issue.
+        }
+        
+        // Strict mapping: if you are a teacher, go to teacher. If student, go to student.
+        if (state.uri.path == '/student' && userRole == 'teacher') {
+            return '/teacher';
+        }
+      }
+
       return null;
     },
     routes: [

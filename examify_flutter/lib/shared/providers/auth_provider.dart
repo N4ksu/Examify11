@@ -49,13 +49,25 @@ class AuthNotifier extends Notifier<AuthState> {
 
     if (token != null) {
       try {
+        final dio = ref.read(apiClientProvider);
+        final response = await dio.get('/user');
+        
+        final user = User.fromJson(response.data);
+        await _storage.write(key: 'user_data', value: jsonEncode(response.data));
+        
+        state = state.copyWith(user: user);
+      } catch (e) {
         final userJsonStr = await _storage.read(key: 'user_data');
         if (userJsonStr != null) {
-           final user = User.fromJson(jsonDecode(userJsonStr));
-           state = state.copyWith(user: user);
+           try {
+             final user = User.fromJson(jsonDecode(userJsonStr));
+             state = state.copyWith(user: user);
+           } catch (_) {
+             await forceLogout();
+           }
+        } else {
+          await forceLogout();
         }
-      } catch (e) {
-        // failed to load user
       }
     }
     state = state.copyWith(isLoading: false);
@@ -156,6 +168,18 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final dio = ref.read(apiClientProvider);
+      await dio.post('/logout');
+    } catch (e) {
+      // Silently fail if network down
+    } finally {
+      await forceLogout();
+    }
+  }
+
+  Future<void> forceLogout() async {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
     await _storage.delete(key: 'expires_at');

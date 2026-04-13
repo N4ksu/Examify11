@@ -1,39 +1,67 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenInterceptor extends Interceptor {
   final Dio dio;
+  final VoidCallback? onUnauthorized;
   final storage = const FlutterSecureStorage();
 
-  TokenInterceptor({required this.dio});
+  TokenInterceptor({required this.dio, this.onUnauthorized});
+
+  // Share a single refresh future among all requests to prevent race conditions
+  Future<bool>? _refreshFuture;
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // If not a login, register, or refresh request, check token
-    if (!options.path.contains('/login') &&
-        !options.path.contains('/register') &&
-        !options.path.contains('/token/refresh')) {
+    final String path = options.path;
+    
+    // Auth routes that never need any token or refresh logic
+    final bool isPublicAuthRoute = path.contains('/login') ||
+        path.contains('/register') ||
+        path.contains('/token/refresh');
+    
+    // Special case: Logout needs the token injected, but should NEVER trigger a refresh
+    final bool isLogoutRoute = path.contains('/logout');
+
+    if (!isPublicAuthRoute) {
       final String? accessToken = await storage.read(key: 'access_token');
       final String? expiresAtStr = await storage.read(key: 'expires_at');
 
-      if (accessToken != null && expiresAtStr != null) {
-        final expiresAt = DateTime.parse(expiresAtStr);
-        final now = DateTime.now().toUtc();
+      // Only check for refresh if it's NOT a logout request
+      if (!isLogoutRoute && accessToken != null && expiresAtStr != null) {
+        try {
+          final expiresAt = DateTime.parse(expiresAtStr).toUtc();
+          final now = DateTime.now().toUtc();
 
-        // If expires within 5 minutes, refresh
-        if (expiresAt.difference(now).inMinutes < 5) {
-          final success = await _refreshToken();
-          if (!success) {
-            // Refresh failed, clear tokens
-            await _clearTokens();
+          // If expires within 5 minutes, refresh
+          if (expiresAt.difference(now).inMinutes < 5) {
+            _refreshFuture ??= _refreshToken();
+            final success = await _refreshFuture;
+            _refreshFuture = null;
+
+            if (success != true) {
+              await _clearTokens();
+              onUnauthorized?.call();
+              return handler.reject(
+                DioException(
+                  requestOptions: options,
+                  error: 'Session expired',
+                  type: DioExceptionType.cancel,
+                ),
+              );
+            }
           }
+        } catch (e) {
+          await _clearTokens();
+          onUnauthorized?.call();
         }
       }
 
-      // Re-read token in case it was refreshed
+      // Inject the current token (cached or freshly refreshed)
       final currentToken = await storage.read(key: 'access_token');
       if (currentToken != null) {
         options.headers['Authorization'] = 'Bearer $currentToken';
@@ -48,7 +76,6 @@ class TokenInterceptor extends Interceptor {
     if (refreshToken == null) return false;
 
     try {
-      // Use a new Dio instance to avoid interceptor loop
       final refreshDio = Dio(
         BaseOptions(
           baseUrl: dio.options.baseUrl,
@@ -85,15 +112,19 @@ class TokenInterceptor extends Interceptor {
     await storage.delete(key: 'access_token');
     await storage.delete(key: 'refresh_token');
     await storage.delete(key: 'expires_at');
+    await storage.delete(key: 'user_data');
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    // Check if 401 Unauthorized
+    // If 401 Unauthorized, trigger forced local logout
     if (err.response?.statusCode == 401) {
-      await _clearTokens();
-      // Note: GoRouter redirection logic will pick up the logged out state
-      // if we have an AuthProvider watching the token or similar mechanics.
+      final String path = err.requestOptions.path;
+      // Don't trigger logout if the 401 comes from login itself
+      if (!path.contains('/login')) {
+        await _clearTokens();
+        onUnauthorized?.call();
+      }
     }
     super.onError(err, handler);
   }
