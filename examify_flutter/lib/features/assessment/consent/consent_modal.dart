@@ -6,6 +6,7 @@ import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 import '../../../core/api/api_client.dart';
 import '../../../shared/models/assessment.dart';
+import '../../../shared/models/student_attempt.dart';
 import '../../../shared/providers/assessment_provider.dart';
 import '../../retake/providers/retake_request_provider.dart';
 
@@ -39,7 +40,7 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
             ? assessment.attempts.last
             : null;
         final isSubmitted =
-            lastAttempt != null && lastAttempt['status'] == 'submitted';
+            lastAttempt != null && lastAttempt.status == 'submitted';
 
         if (isSubmitted) {
           return requestAsync.when(
@@ -69,9 +70,9 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
   Widget _buildAlreadyResponded(
     BuildContext context,
     Assessment assessment,
-    dynamic attempt,
+    StudentAttempt attempt,
   ) {
-    final score = attempt['score'];
+    final score = attempt.score;
     final totalPoints = assessment.questions.fold(
       0,
       (sum, q) => sum + q.points,
@@ -137,7 +138,7 @@ class _ConsentModalState extends ConsumerState<ConsentModal> {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () => context.pushReplacement(
-                        '/attempts/${attempt['id']}/result',
+                        '/attempts/${attempt.id}/result',
                         extra: widget.assessmentId,
                       ),
                       style: ElevatedButton.styleFrom(

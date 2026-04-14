@@ -35,37 +35,55 @@ class AuthState {
 
 class AuthNotifier extends Notifier<AuthState> {
   final _storage = const FlutterSecureStorage();
+  bool _loadUserCalled = false;
 
   @override
   AuthState build() {
-    Future.microtask(() => _loadUser());
+    if (!_loadUserCalled) {
+      _loadUserCalled = true;
+      Future.microtask(() => _loadUser());
+    }
     return AuthState();
   }
 
   Future<void> _loadUser() async {
     state = state.copyWith(isLoading: true);
-    
+
     final token = await _storage.read(key: 'access_token');
 
     if (token != null) {
       try {
         final dio = ref.read(apiClientProvider);
         final response = await dio.get('/user');
-        
+
         final user = User.fromJson(response.data);
         await _storage.write(key: 'user_data', value: jsonEncode(response.data));
-        
+
         state = state.copyWith(user: user);
       } catch (e) {
-        final userJsonStr = await _storage.read(key: 'user_data');
-        if (userJsonStr != null) {
-           try {
-             final user = User.fromJson(jsonDecode(userJsonStr));
-             state = state.copyWith(user: user);
-           } catch (_) {
-             await forceLogout();
-           }
+        // Only restore from cache on genuine network errors (no connectivity).
+        // On server-side rejection (401, 403, etc.) treat as logged out.
+        final isNetworkError = e is DioException &&
+            (e.type == DioExceptionType.connectionError ||
+             e.type == DioExceptionType.connectionTimeout ||
+             e.type == DioExceptionType.receiveTimeout ||
+             e.type == DioExceptionType.sendTimeout ||
+             e.response == null);
+
+        if (isNetworkError) {
+          final userJsonStr = await _storage.read(key: 'user_data');
+          if (userJsonStr != null) {
+            try {
+              final user = User.fromJson(jsonDecode(userJsonStr));
+              state = state.copyWith(user: user);
+            } catch (_) {
+              await forceLogout();
+            }
+          } else {
+            await forceLogout();
+          }
         } else {
+          // Server rejected the token — clear local session immediately.
           await forceLogout();
         }
       }

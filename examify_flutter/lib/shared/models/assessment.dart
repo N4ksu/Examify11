@@ -1,4 +1,5 @@
 import 'question.dart';
+import 'student_attempt.dart';
 
 class Assessment {
   final int id;
@@ -16,7 +17,7 @@ class Assessment {
   final int? courseOutcomeId;
   final Map<String, dynamic>? courseOutcome;
   final List<Question> questions;
-  final List<dynamic> attempts;
+  final List<StudentAttempt> attempts;
 
   Assessment({
     required this.id,
@@ -38,31 +39,48 @@ class Assessment {
   });
 
   factory Assessment.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic val, [int def = 0]) {
+      if (val is int) return val;
+      if (val is num) return val.toInt();
+      if (val is String) return int.tryParse(val) ?? def;
+      return def;
+    }
+
+    bool parseBool(dynamic val, [bool def = true]) {
+      if (val is bool) return val;
+      if (val is int) return val == 1;
+      if (val is String) return val == '1' || val.toLowerCase() == 'true';
+      return def;
+    }
+
     return Assessment(
-      id: json['id'],
-      classroomId: json['classroom_id'] ?? 0,
-      title: json['title'],
-      description: json['description'] ?? '',
-      type: json['type'] ?? 'exam',
-      timeLimitMinutes: json['time_limit_minutes'] ?? 60,
-      isPublished: json['is_published'] ?? true,
-      weight: json['weight'] ?? 0,
-      showScore: json['show_score'] ?? true,
+      id: parseInt(json['id']),
+      classroomId: parseInt(json['classroom_id'], 0),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'exam',
+      timeLimitMinutes: parseInt(json['time_limit_minutes'], 60),
+      isPublished: parseBool(json['is_published'], true),
+      weight: parseInt(json['weight'], 0),
+      showScore: parseBool(json['show_score'], true),
       startsAt: json['starts_at'] != null
-          ? DateTime.parse(json['starts_at'])
+          ? DateTime.tryParse(json['starts_at'])
           : null,
-      endsAt: json['ends_at'] != null ? DateTime.parse(json['ends_at']) : null,
+      endsAt: json['ends_at'] != null ? DateTime.tryParse(json['ends_at']) : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'])
           : null,
-      courseOutcomeId: json['course_outcome_id'],
+      courseOutcomeId: parseInt(json['course_outcome_id']),
       courseOutcome: json['course_outcome'],
       questions:
           (json['questions'] as List?)
               ?.map((e) => Question.fromJson(e))
               .toList() ??
           [],
-      attempts: json['attempts'] ?? [],
+      attempts: (json['attempts'] as List?)
+              ?.map((e) => StudentAttempt.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 
@@ -83,7 +101,7 @@ class Assessment {
       'course_outcome_id': courseOutcomeId,
       'course_outcome': courseOutcome,
       'questions': questions.map((e) => e.toJson()).toList(),
-      'attempts': attempts,
+      'attempts': attempts.map((e) => e.toJson()).toList(),
     };
   }
 }

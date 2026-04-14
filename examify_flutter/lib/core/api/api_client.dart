@@ -16,7 +16,10 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 final apiClientProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: 'http://localhost:8000/api', // Update with your actual API URL
+      baseUrl: const String.fromEnvironment(
+        'API_URL',
+        defaultValue: 'http://localhost:8000/api',
+      ),
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {

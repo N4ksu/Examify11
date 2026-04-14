@@ -5,11 +5,12 @@ import '../../../shared/providers/assessment_provider.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/models/user.dart';
 import '../../../core/api/api_client.dart';
+import '../../../shared/models/student_result.dart';
 
 class StudentResultScreen extends ConsumerWidget {
   final String assessmentId;
   final int? attemptId;
-  final Map<String, dynamic>? result;
+  final StudentResult? result;
 
   const StudentResultScreen({
     super.key,
@@ -37,12 +38,12 @@ class StudentResultScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, Map<String, dynamic> data) {
-    final bool showScore = data['show_score'] ?? true;
-    final score = data['score']?.toString();
-    final total = data['total']?.toString() ?? '0';
-    final percentage = data['percentage']?.toString();
-    final List<dynamic>? questionsResults = data['questions_results'];
+  Widget _buildContent(BuildContext context, WidgetRef ref, StudentResult data) {
+    final bool showScore = data.showScore;
+    final score = data.score?.toString();
+    final total = data.total.toString();
+    final percentage = data.percentage?.toString();
+    final List<QuestionResult> questionsResults = data.questionsResults;
     final user = ref.watch(authProvider).user;
     final bool isTeacher = user?.role == UserRole.teacher;
 
@@ -124,7 +125,7 @@ class StudentResultScreen extends ConsumerWidget {
                   ),
 
                 // Detailed Results
-                if (questionsResults != null)
+                if (questionsResults.isNotEmpty)
                   ...questionsResults.map(
                     (q) => _buildQuestionCard(context, ref, q, isTeacher),
                   ),
@@ -162,12 +163,12 @@ class StudentResultScreen extends ConsumerWidget {
   Widget _buildQuestionCard(
     BuildContext context,
     WidgetRef ref,
-    Map<String, dynamic> q,
+    QuestionResult q,
     bool isTeacher,
   ) {
-    final bool isEssay = q['type'] == 'essay';
-    final bool isCorrect = q['is_correct'] ?? false;
-    final String studentAnswer = q['student_response'] ?? 'No answer';
+    final bool isEssay = q.type == 'essay';
+    final bool isCorrect = q.isCorrect;
+    final String studentAnswer = q.studentResponse;
 
     return Container(
       width: double.infinity,
@@ -187,7 +188,7 @@ class StudentResultScreen extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  q['body'] ?? '',
+                  q.body,
                   style: const TextStyle(
                     fontSize: 16,
                     color: Color(0xFF333333),
@@ -221,12 +222,12 @@ class StudentResultScreen extends ConsumerWidget {
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () => _setOverride(context, ref, q['id'], true),
+                  onPressed: () => _setOverride(context, ref, q.id, true),
                   icon: const Icon(Icons.check, size: 16, color: Colors.green),
                   label: const Text('Correct', style: TextStyle(color: Colors.green)),
                 ),
                 TextButton.icon(
-                  onPressed: () => _setOverride(context, ref, q['id'], false),
+                  onPressed: () => _setOverride(context, ref, q.id, false),
                   icon: const Icon(Icons.close, size: 16, color: Colors.red),
                   label: const Text('Incorrect', style: TextStyle(color: Colors.red)),
                 ),

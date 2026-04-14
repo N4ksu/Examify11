@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/providers/auth_provider.dart';
-import '../../shared/models/user.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   final bool registered;
@@ -69,20 +69,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
-      final success = await ref
+      await ref
           .read(authProvider.notifier)
           .login(_emailController.text.trim(), _passwordController.text, remember);
-
-      if (!mounted) return;
-
-      if (success) {
-        final user = ref.read(authProvider).user;
-        if (user?.role == UserRole.teacher) {
-          context.go('/teacher');
-        } else {
-          context.go('/student');
-        }
-      }
+      // Router automatically redirects based on auth state — no manual navigation needed.
     }
   }
 

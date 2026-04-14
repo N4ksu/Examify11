@@ -6,6 +6,7 @@ import '../../shared/providers/auth_provider.dart';
 import '../../../core/api/api_client.dart';
 
 import '../../shared/models/assessment.dart';
+import '../../shared/models/student_attempt.dart';
 import '../../shared/providers/assessment_provider.dart';
 import 'providers/assessment_status_provider.dart';
 import 'widgets/retake_request_modal.dart';
@@ -151,8 +152,8 @@ class AssessmentsTab extends ConsumerWidget {
 
         return statusAsync.when(
           data: (data) {
-            final attempt = data['attempt'];
-            final request = data['request'];
+            final attempt = data.attempt;
+            final request = data.request;
 
             return usedRetakesAsync.when(
               data: (usedRetakes) {
@@ -181,7 +182,7 @@ class AssessmentsTab extends ConsumerWidget {
                     isMobile: isMobile,
                   );
                 } else {
-                  if (attempt['status'] == 'in_progress') {
+                  if (attempt.status == 'in_progress') {
                     return _buildResumeButton(context, assessment, attempt, isMobile: isMobile);
                   }
                   return _buildCompleted(
@@ -223,8 +224,8 @@ class AssessmentsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildResumeButton(BuildContext context, Assessment assessment, dynamic attempt, {bool isMobile = false}) {
-    String subtitle = 'In progress • Started ${_formatTime(attempt['started_at'])}';
+  Widget _buildResumeButton(BuildContext context, Assessment assessment, StudentAttempt attempt, {bool isMobile = false}) {
+    String subtitle = 'In progress • Started ${_formatTime(attempt.startedAt?.toIso8601String())}';
     
     return _buildAssignmentItem(
       context,
@@ -234,8 +235,8 @@ class AssessmentsTab extends ConsumerWidget {
       isTeacher: false,
       status: 'In Progress',
       isMobile: isMobile,
-      onTap: () => _resumeExam(context, assessment.id, attempt['id']),
-      onRetakeRequest: () => _resumeExam(context, assessment.id, attempt['id']),
+      onTap: () => _resumeExam(context, assessment.id, attempt.id),
+      onRetakeRequest: () => _resumeExam(context, assessment.id, attempt.id),
       retakeLabel: 'Resume Exam',
     );
   }
@@ -316,7 +317,7 @@ class AssessmentsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Assessment assessment,
-    dynamic attempt, {
+    StudentAttempt attempt, {
     bool isMobile = false,
   }) {
     return _buildAssignmentItem(
@@ -327,7 +328,7 @@ class AssessmentsTab extends ConsumerWidget {
       isTeacher: false,
       status: 'Pending',
       isMobile: isMobile,
-      onTap: () => context.push('/attempts/${attempt['id']}/result'),
+      onTap: () => context.push('/attempts/${attempt.id}/result'),
       onRetakeRequest: null,
       retakeLabel: 'Pending Request',
     );
@@ -337,7 +338,7 @@ class AssessmentsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Assessment assessment,
-    dynamic attempt, {
+    StudentAttempt attempt, {
     bool isMobile = false,
   }) {
     return _buildAssignmentItem(
@@ -359,13 +360,13 @@ class AssessmentsTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Assessment assessment,
-    dynamic attempt,
+    StudentAttempt attempt,
     String? requestStatus,
     bool canRequestRetake,
     int usedRetakes, {
     bool isMobile = false,
   }) {
-    final score = attempt['score'];
+    final score = attempt.score;
     String subtitle =
         'Score: $score / ${_totalPoints(assessment)}${requestStatus == 'denied' ? ' • Denied' : ''}';
 
@@ -378,7 +379,7 @@ class AssessmentsTab extends ConsumerWidget {
       status: 'Done',
       isCompleted: true,
       isMobile: isMobile,
-      onTap: () => context.push('/attempts/${attempt['id']}/result'),
+      onTap: () => context.push('/attempts/${attempt.id}/result'),
       onRetakeRequest:
           (canRequestRetake &&
               (requestStatus == null ||

@@ -20,14 +20,21 @@ class Question {
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic val, [int def = 0]) {
+      if (val is int) return val;
+      if (val is num) return val.toInt();
+      if (val is String) return int.tryParse(val) ?? def;
+      return def;
+    }
+
     return Question(
-      id: json['id'],
-      assessmentId: json['assessment_id'] ?? 0,
-      body: json['body'] ?? json['text'] ?? '',
-      type: json['type'] ?? 'multiple_choice',
-      points: json['points'] ?? 1,
-      order: json['order'] ?? 0,
-      scoringMethod: json['scoring_method'] ?? 'exact',
+      id: parseInt(json['id']),
+      assessmentId: parseInt(json['assessment_id'], 0),
+      body: json['body']?.toString() ?? json['text']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'multiple_choice',
+      points: parseInt(json['points'], 1),
+      order: parseInt(json['order'], 0),
+      scoringMethod: json['scoring_method']?.toString() ?? 'exact',
       options:
           (json['options'] as List?)?.map((o) => Option.fromJson(o)).toList() ??
           [],
@@ -64,10 +71,26 @@ class Option {
     if (json is String) {
       return Option(body: json);
     }
+    
+    int? parseInt(dynamic val) {
+      if (val == null) return null;
+      if (val is int) return val;
+      if (val is num) return val.toInt();
+      if (val is String) return int.tryParse(val);
+      return null;
+    }
+
+    bool parseBool(dynamic val) {
+      if (val is bool) return val;
+      if (val is int) return val == 1;
+      if (val is String) return val == '1' || val.toLowerCase() == 'true';
+      return false;
+    }
+
     return Option(
-      id: json['id'],
-      body: json['body'] ?? '',
-      isCorrect: json['is_correct'] ?? false,
+      id: parseInt(json['id']),
+      body: json['body']?.toString() ?? '',
+      isCorrect: parseBool(json['is_correct']),
     );
   }
 

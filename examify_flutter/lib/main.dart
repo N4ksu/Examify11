@@ -10,6 +10,7 @@ import 'dart:io' show Platform;
 import 'core/theme/app_theme.dart';
 import 'core/api/api_client.dart';
 import 'shared/providers/auth_provider.dart';
+import 'shared/models/student_result.dart';
 
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
@@ -149,7 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => StudentResultScreen(
           assessmentId: '',
           attemptId: int.tryParse(state.pathParameters['id']!),
-          result: state.extra as Map<String, dynamic>?,
+          result: state.extra as StudentResult?,
         ),
       ),
       GoRoute(
@@ -159,7 +160,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return StudentResultScreen(
             assessmentId: state.pathParameters['id']!,
             attemptId: extra is int ? extra : null,
-            result: extra is Map<String, dynamic> ? extra : null,
+            result: extra is StudentResult ? extra : null,
           );
         },
       ),
