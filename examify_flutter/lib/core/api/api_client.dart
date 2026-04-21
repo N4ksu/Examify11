@@ -18,7 +18,7 @@ final apiClientProvider = Provider<Dio>((ref) {
     BaseOptions(
       baseUrl: const String.fromEnvironment(
         'API_URL',
-        defaultValue: 'http://localhost:8000/api',
+        defaultValue: 'https://examify11.onrender.com/api',
       ),
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
