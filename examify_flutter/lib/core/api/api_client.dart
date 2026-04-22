@@ -18,7 +18,7 @@ final apiClientProvider = Provider<Dio>((ref) {
     BaseOptions(
       baseUrl: const String.fromEnvironment(
         'API_URL',
-        defaultValue: 'https://examify-ovjt.onrender.com/',
+        defaultValue: 'https://examify-ovjt.onrender.com/api',
       ),
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
