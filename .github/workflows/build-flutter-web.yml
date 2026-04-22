@@ -1,0 +1,58 @@
+# .github/workflows/build-flutter-web.yml
+name: Build Flutter Web for Render
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'examify_flutter/**'
+      - '.github/workflows/build-flutter-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flutter-web-build
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Flutter SDK
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Flutter
+        run: |
+          flutter --version
+          flutter config --enable-web
+
+      - name: Get dependencies
+        working-directory: examify_flutter
+        run: flutter pub get
+
+      - name: Build Flutter web
+        working-directory: examify_flutter
+        run: flutter build web --release --dart-define=API_URL=${{ vars.API_URL }}
+
+      - name: Replace render_frontend contents
+        run: |
+          rm -rf render_frontend/*
+          cp -r examify_flutter/build/web/* render_frontend/
+
+      - name: Commit built frontend
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add render_frontend
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: update render_frontend build"
+          git push
